@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import LiveScoresPage from './pages/LiveScoresPage';
 import ProfilePage from './pages/profilePage';
@@ -36,6 +36,7 @@ const App = () => {
           <Route path="/profile" element={<ProfilePage />} /> 
           <Route path="/account" element={<AccountPage />} />
           <Route path="/tables" element={<Tables />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <TabBar />
       </div>

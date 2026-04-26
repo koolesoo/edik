@@ -44,15 +44,14 @@
   transform: translateY(-1px);
 }
 
-.tab-icon img {
+.tab-icon svg {
   width: 20px;
   height: 20px;
-  object-fit: contain;
-  filter: brightness(0) saturate(100%) invert(86%) sepia(6%) saturate(252%) hue-rotate(185deg) brightness(118%) contrast(100%);
+  color: var(--text-muted);
 }
 
-.tab-item.active .tab-icon img {
-  filter: brightness(0) saturate(100%) invert(8%) sepia(21%) saturate(1312%) hue-rotate(162deg) brightness(95%) contrast(106%);
+.tab-item.active .tab-icon svg {
+  color: var(--on-primary-container);
 }
 
 @media (max-width: 768px) {
@@ -68,7 +67,7 @@
     letter-spacing: 0.03em;
   }
 
-  .tab-icon img {
+  .tab-icon svg {
     width: 21px;
     height: 21px;
   }
