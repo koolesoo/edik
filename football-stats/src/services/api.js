@@ -1,7 +1,13 @@
 import axios from 'axios';
 
-const footballDataBaseUrl = import.meta.env.VITE_FOOTBALL_DATA_API_BASE_URL || '/api';
-const premierLeagueBaseUrl = import.meta.env.VITE_PREMIER_LEAGUE_API_BASE_URL || 'http://127.0.0.1:5000';
+const isGithubPages =
+  typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+const footballDataBaseUrl =
+  import.meta.env.VITE_FOOTBALL_DATA_API_BASE_URL
+  || (isGithubPages ? 'https://api.football-data.org/v4' : '/api');
+const premierLeagueBaseUrl =
+  import.meta.env.VITE_PREMIER_LEAGUE_API_BASE_URL
+  || (isGithubPages ? 'https://api.football-data.org/v4' : 'http://127.0.0.1:5000');
 
 const api = axios.create({
   baseURL: footballDataBaseUrl,
