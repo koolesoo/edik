@@ -1,0 +1,83 @@
+.live-score-card {
+  display: grid;
+  gap: 14px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-xl);
+  padding: 18px 20px;
+  width: 100%;
+  min-width: 0;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.live-score-card:hover {
+  background: var(--surface-container-high);
+  transform: translateY(-1px);
+}
+
+.match-date-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.teams-container {
+  display: grid;
+  gap: 8px;
+}
+
+.team {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.team-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.team-name {
+  font-size: 1rem;
+  color: var(--text-body);
+  text-align: left;
+}
+
+.team-name.winner {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.team-score {
+  width: 20px;
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.progress-pill-track {
+  height: 8px;
+  margin-top: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-highest);
+  overflow: hidden;
+}
+
+.progress-pill-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+  transition: width 260ms ease;
+}
+
+@media (max-width: 1024px) {
+  .live-score-card {
+    border-radius: 2.2rem;
+    padding: 16px;
+  }
+}
