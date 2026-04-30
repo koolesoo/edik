@@ -13,7 +13,9 @@
 
 .tab-item {
   display: grid;
-  place-items: center;
+  grid-template-rows: 20px auto;
+  justify-items: center;
+  align-content: center;
   gap: 0;
   width: 100%;
   min-height: 56px;
@@ -30,7 +32,16 @@
 
 .tab-icon {
   line-height: 0;
-  margin-bottom: -1px;
+  margin-bottom: -5px;
+  display: grid;
+  place-items: center;
+  min-height: 20px;
+}
+
+.tab-label-full,
+.tab-label-short {
+  line-height: 1;
+  margin: 0;
 }
 
 .tab-item.active {
@@ -50,7 +61,56 @@
   color: var(--text-muted);
 }
 
+.tab-matches-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+}
+
+.tab-live-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+}
+
+.tab-team-logo,
+.tab-team-fallback {
+  width: 20px;
+  height: 20px;
+}
+
+.tab-team-logo {
+  object-fit: contain;
+  display: block;
+}
+
+.tab-team-fallback {
+  border-radius: 999px;
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+}
+
+.tab-team-fallback svg {
+  width: 15px;
+  height: 15px;
+}
+
+.tab-label-short {
+  display: none;
+}
+
 .tab-item.active .tab-icon svg {
+  color: var(--on-primary-container);
+}
+
+.tab-item.active .tab-team-fallback {
   color: var(--on-primary-container);
 }
 
@@ -70,6 +130,14 @@
   .tab-icon svg {
     width: 21px;
     height: 21px;
+  }
+
+  .tab-label-full {
+    display: none;
+  }
+
+  .tab-label-short {
+    display: inline;
   }
 }
 

@@ -7,9 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://api.football-data.org/v4', // Адрес API
+        target: 'http://127.0.0.1:5001', // Local Flask API
         changeOrigin: true, // Изменять Origin заголовок
-        rewrite: (path) => path.replace(/^\/api/, ''), // Удаляем префикс /api
       },
     },
   },

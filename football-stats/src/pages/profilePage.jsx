@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getPremierLeagueStandings, getPremierLeagueTeamOverview } from '../services/api';
-import CenterLoader from '../components/CenterLoader';
 
 const normalizeTeamKey = (name) => String(name || '')
   .toLowerCase()
@@ -72,6 +71,18 @@ const ProfilePage = () => {
     [],
   );
 
+  const statusIconMap = useMemo(
+    () => ({
+      IN_PLAY: '🔴',
+      PAUSED: '⏸',
+      FINISHED: '✓',
+      TIMED: '🕒',
+      SCHEDULED: '📅',
+    }),
+    [],
+  );
+  const [isDeleteSheetOpen, setIsDeleteSheetOpen] = useState(false);
+
   const renderTeamInlineNoLike = (teamName, crest, score) => {
     const safeName = teamName || 'Team';
     const shortName = safeName
@@ -104,6 +115,7 @@ const ProfilePage = () => {
     setFavoriteTeamForCurrentUser('');
     setTeamOverview(null);
     setOverviewError('');
+    setIsDeleteSheetOpen(false);
   };
 
   useEffect(() => {
@@ -163,9 +175,39 @@ const ProfilePage = () => {
   }, []);
 
   const displayOverview = isAuthenticated ? teamOverview : null;
+  const hasFavoriteTeam = Boolean(currentUser?.favoriteTeam);
 
   if (isLoadingOverview) {
-    return <CenterLoader />;
+    return (
+      <motion.main
+        className="page"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      >
+        <section className="section-surface section-surface--team-feature">
+          <div className="skeleton-line skeleton-line--title skeleton-shimmer" />
+          <div className="team-overview-grid">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div className="team-stat-pill skeleton-card" key={`profile-stat-skeleton-${index}`}>
+                <div className="skeleton-line skeleton-line--label skeleton-shimmer" />
+                <div className="skeleton-line skeleton-line--value skeleton-shimmer" />
+              </div>
+            ))}
+          </div>
+          <div className="profile-fixtures">
+            <div className="skeleton-line skeleton-line--label skeleton-shimmer" />
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div className="section-surface fixture-card skeleton-card" key={`profile-fixture-skeleton-${index}`}>
+                <div className="skeleton-line skeleton-line--row skeleton-shimmer" />
+                <div className="skeleton-line skeleton-line--row skeleton-shimmer" />
+                <div className="skeleton-line skeleton-line--meta skeleton-shimmer" />
+              </div>
+            ))}
+          </div>
+        </section>
+      </motion.main>
+    );
   }
 
   return (
@@ -179,46 +221,49 @@ const ProfilePage = () => {
         <div className="profile-top-actions">
           <Link to="/account" className="profile-badge floating-surface" aria-label="Открыть профиль">
             <span className="profile-badge-icon" aria-hidden="true" />
-            <span className="profile-badge-text">{isAuthenticated ? (currentUser.displayName || currentUser.username) : 'Профиль'}</span>
+            <span className="profile-badge-content">
+              <span className="profile-badge-text">{isAuthenticated ? (currentUser.displayName || currentUser.username) : 'Профиль'}</span>
+              <span className="profile-badge-edit">Редактировать</span>
+            </span>
           </Link>
         </div>
         {!isAuthenticated ? (
-          <p className="body-lg">
-            Авторизуйтесь в экране профиля, чтобы привязать любимый клуб и видеть его матчи.
-          </p>
+          <div className="profile-empty-state">
+            <p className="body-lg">
+              Авторизуйтесь в экране профиля, чтобы привязать любимый клуб и видеть его матчи.
+            </p>
+            <Link to="/matches" className="pill-btn pill-btn--secondary profile-empty-state-cta">
+              Перейти к матчам
+            </Link>
+          </div>
         ) : null}
       </section>
       {isAuthenticated ? (
       <section className="section-surface section-surface--team-feature">
-        <div className="preview-head">
-          <div className="preview-team-main">
-            {displayOverview?.standing?.crest ? (
-              <img className="profile-team-logo-lg" src={displayOverview.standing.crest} alt={displayOverview.teamName || 'Team'} />
-            ) : (
-              <div className="profile-team-logo-lg profile-team-logo-lg--fallback" aria-hidden="true">
-                {(displayOverview?.teamName || currentUser?.favoriteTeam || 'FC').slice(0, 2).toUpperCase()}
+        {hasFavoriteTeam ? (
+          <>
+            <div className="preview-head">
+              <div className="preview-team-main">
+                {displayOverview?.standing?.crest ? (
+                  <img className="profile-team-logo-lg" src={displayOverview.standing.crest} alt={displayOverview.teamName || 'Team'} />
+                ) : (
+                  <div className="profile-team-logo-lg profile-team-logo-lg--fallback" aria-hidden="true">
+                    {(displayOverview?.teamName || currentUser?.favoriteTeam || 'FC').slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <h3 className="headline-md">{displayOverview?.teamName || currentUser?.favoriteTeam || 'Любимая команда'}</h3>
               </div>
-            )}
-            <h3 className="headline-md">{displayOverview?.teamName || currentUser?.favoriteTeam || 'Любимая команда'}</h3>
-          </div>
-          {isAuthenticated && currentUser?.favoriteTeam ? (
-            <button
-              type="button"
-              className="icon-btn-trash"
-              onClick={clearFavoriteTeam}
-              aria-label="Удалить любимую команду"
-              title="Удалить любимую команду"
-            >
-              ✕
-            </button>
-          ) : null}
-          {!isAuthenticated ? (
-            <span className="meta-pill meta-pill--accent">Предпросмотр без входа</span>
-          ) : null}
-        </div>
-        {isAuthenticated && !currentUser?.favoriteTeam ? (
-          <p className="body-lg">Выберите команду на экране результатов, чтобы видеть ее матчи и статистику.</p>
-        ) : displayOverview?.standing ? (
+              <button
+                type="button"
+                className="icon-btn-trash"
+                onClick={() => setIsDeleteSheetOpen(true)}
+                aria-label="Удалить любимую команду"
+                title="Удалить любимую команду"
+              >
+                ✕
+              </button>
+            </div>
+            {displayOverview?.standing ? (
           <div className="team-overview-grid">
             <div className="team-stat-pill">
               <span className="label-md">Позиция</span>
@@ -246,37 +291,51 @@ const ProfilePage = () => {
         ) : (
           <p className="body-lg">Данные о позиции команды пока недоступны.</p>
         )}
-        <div className="profile-fixtures">
-          <p className="title-sm">Ближайшие матчи</p>
-          {displayOverview?.fixtures?.length > 0 ? (
-            <ul className="fixture-list">
-              {displayOverview.fixtures.map((fixture, index) => {
-                const parsed = parseFixtureLine(fixture, crestByTeam);
-                return (
-                  <li
-                    className="fixture-list-item fixture-list-item--profile fixture-card"
-                    key={`${parsed.homeTeamName}-${parsed.awayTeamName}-${parsed.date}-${index}`}
-                  >
-                    <div className="fixture-row">
-                      <div className="fixture-main fixture-main--scoreline">
-                        {renderTeamInlineNoLike(parsed.homeTeamName, parsed.homeCrest, parsed.homeScore)}
-                        {renderTeamInlineNoLike(parsed.awayTeamName, parsed.awayCrest, parsed.awayScore)}
-                      </div>
-                    </div>
-                    <div className="fixture-meta-row">
-                      <p className="fixture-sub">{parsed.date}</p>
-                      {!isUpcomingFixture(parsed.status) ? (
-                        <span className={`status-chip status-chip--${parsed.status}`}>
-                          {statusLabelMap[parsed.status] || parsed.status}
-                        </span>
-                      ) : null}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : <p className="body-lg">Нет данных по ближайшим матчам.</p>}
-        </div>
+            <div className="profile-fixtures">
+              <p className="title-sm">Ближайшие матчи</p>
+              {displayOverview?.fixtures?.length > 0 ? (
+                <ul className="fixture-list">
+                  {displayOverview.fixtures.map((fixture, index) => {
+                    const parsed = parseFixtureLine(fixture, crestByTeam);
+                    return (
+                      <li
+                        className="fixture-list-item fixture-list-item--profile fixture-card"
+                        key={`${parsed.homeTeamName}-${parsed.awayTeamName}-${parsed.date}-${index}`}
+                      >
+                        <div className="fixture-row">
+                          <div className="fixture-main fixture-main--scoreline">
+                            {renderTeamInlineNoLike(parsed.homeTeamName, parsed.homeCrest, parsed.homeScore)}
+                            {renderTeamInlineNoLike(parsed.awayTeamName, parsed.awayCrest, parsed.awayScore)}
+                          </div>
+                        </div>
+                        <div className="fixture-meta-row">
+                          <p className="fixture-sub">{parsed.date}</p>
+                          {!isUpcomingFixture(parsed.status) ? (
+                            <span className={`status-chip status-chip--${parsed.status}`}>
+                              <span className="status-chip-icon" aria-hidden="true">
+                                {statusIconMap[parsed.status] || '•'}
+                              </span>
+                              {statusLabelMap[parsed.status] || parsed.status}
+                            </span>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : <p className="body-lg">Нет данных по ближайшим матчам.</p>}
+            </div>
+          </>
+        ) : (
+          <div className="profile-empty-state">
+            <p className="body-lg">
+              Выберите команду на экране результатов, чтобы видеть ее матчи и статистику.
+            </p>
+            <Link to="/matches" className="pill-btn pill-btn--secondary profile-empty-state-cta">
+              Перейти к матчам
+            </Link>
+          </div>
+        )}
       </section>
       ) : null}
       <section className="section-surface">
@@ -285,6 +344,28 @@ const ProfilePage = () => {
           команда привяжется к вашему пользователю и появится в профиле.
         </p>
       </section>
+      {isDeleteSheetOpen ? (
+        <div className="sheet-backdrop" role="presentation" onClick={() => setIsDeleteSheetOpen(false)}>
+          <section
+            className="bottom-sheet section-surface"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Подтверждение удаления команды"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="headline-md">Удалить из профиля?</p>
+            <p className="body-lg">Любимая команда будет убрана. Позже можно выбрать ее снова в матчах.</p>
+            <div className="bottom-sheet-actions">
+              <button type="button" className="pill-btn pill-btn--secondary" onClick={() => setIsDeleteSheetOpen(false)}>
+                Отмена
+              </button>
+              <button type="button" className="pill-btn pill-btn--primary" onClick={clearFavoriteTeam}>
+                Удалить
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </motion.main>
   );
 };

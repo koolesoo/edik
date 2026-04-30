@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AccountPage = () => {
+  const navigate = useNavigate();
   const { currentUser, isAuthenticated, register, login, logout, updateDisplayNameForCurrentUser } = useAuth();
   const [mode, setMode] = useState('login');
   const [username, setUsername] = useState('');
@@ -45,6 +47,14 @@ const AccountPage = () => {
     }
   };
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/profile');
+  };
+
   return (
     <motion.main
       className="page"
@@ -53,8 +63,18 @@ const AccountPage = () => {
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <section className="section-surface">
-        <p className="label-md">Account</p>
-        <h2 className="headline-md">Профиль</h2>
+        <div className="profile-top-actions">
+          <button
+            type="button"
+            className="profile-back-btn floating-surface"
+            onClick={handleBack}
+            aria-label="Назад"
+            title="Назад"
+          >
+            <span className="profile-back-chevron" aria-hidden="true">‹</span>
+          </button>
+          <h2 className="headline-md">Профиль</h2>
+        </div>
 
         {!isAuthenticated ? (
           <div className="auth-stack">
@@ -101,9 +121,6 @@ const AccountPage = () => {
           </div>
         ) : (
           <div className="profile-stack">
-            <p className="body-lg">
-              Вы вошли как <span className="shiny-text">{currentUser.displayName || currentUser.username}</span>.
-            </p>
             <form className="auth-form" onSubmit={handleDisplayNameSave}>
               <label className="label-md" htmlFor="displayName">Имя в профиле</label>
               <input

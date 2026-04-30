@@ -1,22 +1,8 @@
 import axios from 'axios';
 
-const isGithubPages =
-  typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
-const footballDataBaseUrl =
-  import.meta.env.VITE_FOOTBALL_DATA_API_BASE_URL
-  || (isGithubPages ? 'https://api.football-data.org/v4' : '/api');
-const premierLeagueBaseUrl =
-  import.meta.env.VITE_PREMIER_LEAGUE_API_BASE_URL
-  || (isGithubPages ? 'https://api.football-data.org/v4' : 'http://127.0.0.1:5000');
+const premierLeagueBaseUrl = '/api';
 
 const api = axios.create({
-  baseURL: footballDataBaseUrl,
-  headers: {
-    'X-Auth-Token': import.meta.env.VITE_FOOTBALL_DATA_API_KEY,
-  },
-});
-
-const premierLeagueApi = axios.create({
   // External API from tarun7r/Premier-League-API.
   baseURL: premierLeagueBaseUrl,
 });
@@ -123,16 +109,6 @@ const getCachedFixtures = (teamName) => {
   return cached.payload;
 };
 
-const formatFixtureLine = (match) => {
-  const home = match?.homeTeam?.name || 'Home';
-  const away = match?.awayTeam?.name || 'Away';
-  const date = new Date(match?.utcDate || Date.now());
-  const datePart = date.toLocaleDateString('ru-RU');
-  const timePart = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  const status = match?.status ? ` [${match.status}]` : '';
-  return `${home} vs ${away} ${datePart} ${timePart}${status}`;
-};
-
 const parseFixtureString = (line) => {
   const text = String(line || '');
   const dateMatch = text.match(/(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2})/);
@@ -186,34 +162,12 @@ const normalizeFixtureObject = (fixture) => {
   return parseFixtureString(fixture);
 };
 
-const normalizeTableRows = (rows) => rows.map((row) => ({
-  position: row.position,
-  team: row.team?.name || '-',
-  crest: row.team?.crest || '',
-  played: row.playedGames,
-  goalsFor: row.goalsFor ?? null,
-  goalsAgainst: row.goalsAgainst ?? null,
-  won: row.won,
-  draw: row.draw,
-  lost: row.lost,
-  goalDiff: (row.goalsFor ?? 0) - (row.goalsAgainst ?? 0),
-  points: row.points,
-}));
-
 export const getCompetitions = async () => {
-  return cachedRequest(
-    'competitions',
-    async () => {
-      const response = await api.get('/competitions');
-      return response.data.competitions ?? [];
-    },
-    5 * 60 * 1000,
-  );
+  return [];
 };
 
 export const getTeams = async () => {
-  const response = await api.get('/teams');
-  return response.data.teams ?? [];
+  return [];
 };
 
 export const getGroupedTeams = async () => {
@@ -222,47 +176,37 @@ export const getGroupedTeams = async () => {
 
 export const getMatches = async (leagueId, dateFrom, dateTo) => {
   try {
-    const params = {};
-    if (dateFrom) {
-      params.dateFrom = dateFrom;
-    }
-    if (dateTo) {
-      params.dateTo = dateTo;
-    }
-
-    const response = await api.get(`/competitions/${leagueId}/matches`, {
-      params,
+    const response = await api.get(`/matches/${leagueId}`, {
+      params: {
+        dateFrom,
+        dateTo,
+      },
     });
-    return response.data.matches ?? [];
+    if (Array.isArray(response.data)) return response.data;
+    return response.data?.matches ?? [];
   } catch (error) {
     console.error('Ошибка при получении матчей:', error.response?.data || error.message);
-    throw error;
+    return [];
   }
 };
 
 export const getStandings = async (competitionId) => {
-  const response = await api.get(`/competitions/${competitionId}/standings`);
-  return response.data;
+  void competitionId;
+  return getPremierLeagueStandings();
 };
 
 export const getPremierLeagueTable = async () => {
   return cachedRequest(
     'pl.table',
     async () => {
-      try {
-        const response = await premierLeagueApi.get('/table');
-        return response.data;
-      } catch (error) {
-        // Fallback to football-data.org if PL API is unavailable.
-        const response = await api.get('/competitions/PL/standings');
-        const rows = response?.data?.standings?.[0]?.table ?? [];
-        const header = ['Position', 'Team', 'Played', 'Wins', 'Draws', 'Losses', 'Goal Difference', 'Points'];
-        const body = rows.map((row) => {
-          const gd = (row.goalsFor ?? 0) - (row.goalsAgainst ?? 0);
-          return `${row.position}. ${row.team.name} | ${row.playedGames} | ${row.won} | ${row.draw} | ${row.lost} | ${gd} | ${row.points}`;
-        });
-        return [header.join(' | '), ...body];
-      }
+      const response = await api.get('/standings/2021');
+      const rows = response?.data?.standings?.[0]?.table ?? [];
+      const header = ['Position', 'Team', 'Played', 'Wins', 'Draws', 'Losses', 'Goal Difference', 'Points'];
+      const body = rows.map((row) => {
+        const gd = Number(row.goalsFor ?? 0) - Number(row.goalsAgainst ?? 0);
+        return `${row.position}. ${row.team?.name || '-'} | ${row.playedGames ?? 0} | ${row.won ?? 0} | ${row.draw ?? 0} | ${row.lost ?? 0} | ${gd} | ${row.points ?? 0}`;
+      });
+      return [header.join(' | '), ...body];
     },
     2 * 60 * 1000,
   );
@@ -276,8 +220,23 @@ export const getPremierLeagueFixtures = async (teamName) => {
   }
 
   try {
-    const response = await premierLeagueApi.get(`/fixtures/${encodeURIComponent(teamName)}`);
-    const payload = Array.isArray(response.data) ? response.data : [];
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(today.getDate() - 10);
+    const to = new Date(today);
+    to.setDate(today.getDate() + 30);
+    const dateFrom = from.toISOString().split('T')[0];
+    const dateTo = to.toISOString().split('T')[0];
+
+    const response = await api.get('/matches/2021', { params: { dateFrom, dateTo } });
+    const matches = response?.data?.matches ?? [];
+    const normalizedTeam = String(teamName || '').toLowerCase();
+    const payload = matches.filter((match) => {
+      const home = String(match?.homeTeam?.name || '').toLowerCase();
+      const away = String(match?.awayTeam?.name || '').toLowerCase();
+      return home.includes(normalizedTeam) || away.includes(normalizedTeam);
+    });
+
     saveFixturesCache(teamName, payload);
     setApiCacheEntry(cacheKey, payload);
     return payload;
@@ -290,48 +249,14 @@ export const getPremierLeagueFixtures = async (teamName) => {
       throw new Error('Превышен лимит API (429). Попробуйте снова чуть позже.');
     }
 
-    // Fallback: take nearby PL fixtures and filter by team name.
-    try {
-      const today = new Date();
-      const from = new Date(today);
-      from.setDate(today.getDate() - 3);
-      const to = new Date(today);
-      to.setDate(today.getDate() + 14);
-      const dateFrom = from.toISOString().split('T')[0];
-      const dateTo = to.toISOString().split('T')[0];
-
-      const response = await api.get('/competitions/PL/matches', { params: { dateFrom, dateTo } });
-      let matches = response.data.matches ?? [];
-      if (!matches.length) {
-        // If the date window is empty, request season data without date bounds.
-        const seasonResponse = await api.get('/competitions/PL/matches');
-        matches = seasonResponse.data.matches ?? [];
-      }
-      const normalizedTeam = String(teamName || '').toLowerCase();
-      const filtered = matches.filter((match) => {
-        const home = (match?.homeTeam?.name || '').toLowerCase();
-        const away = (match?.awayTeam?.name || '').toLowerCase();
-        return home.includes(normalizedTeam) || away.includes(normalizedTeam);
-      });
-
-      const list = filtered.length ? filtered : matches;
-      const payload = list.slice(0, 8).map(formatFixtureLine);
-      saveFixturesCache(teamName, payload);
-      setApiCacheEntry(cacheKey, payload);
-      return payload;
-    } catch (fallbackError) {
-      if ((isRateLimitError(fallbackError) || isOffline()) && cachedByKey?.payload) {
-        return cachedByKey.payload;
-      }
-      const cached = getCachedFixtures(teamName);
-      if (cached?.length) {
-        return cached;
-      }
-      if (isRateLimitError(fallbackError)) {
-        throw new Error('Превышен лимит API (429). Попробуйте снова чуть позже.');
-      }
-      throw fallbackError;
+    if ((isRateLimitError(error) || isOffline()) && cachedByKey?.payload) {
+      return cachedByKey.payload;
     }
+    const cached = getCachedFixtures(teamName);
+    if (cached?.length) {
+      return cached;
+    }
+    throw error;
   }
 };
 
@@ -339,37 +264,21 @@ export const getPremierLeagueStandings = async () => {
   return cachedRequest(
     'pl.standings',
     async () => {
-      try {
-        const response = await api.get('/competitions/PL/standings');
-        const rows = response?.data?.standings?.[0]?.table ?? [];
-        return normalizeTableRows(rows);
-      } catch (error) {
-        const fallback = await getPremierLeagueTable();
-        if (!Array.isArray(fallback)) {
-          return [];
-        }
-        return fallback
-          .filter((row, index) => !(index === 0 && String(row).toLowerCase().includes('position')))
-          .map((row) => {
-            const [positionAndTeam, played, won, draw, lost, goalDiff, points] = String(row)
-              .split('|')
-              .map((part) => part.trim());
-            const positionMatch = positionAndTeam.match(/^(\d+)\.\s*(.*)$/);
-            return {
-              position: Number(positionMatch?.[1] || 0),
-              team: positionMatch?.[2] || positionAndTeam || '-',
-              crest: '',
-              played: Number(played || 0),
-              goalsFor: null,
-              goalsAgainst: null,
-              won: Number(won || 0),
-              draw: Number(draw || 0),
-              lost: Number(lost || 0),
-              goalDiff: Number(goalDiff || 0),
-              points: Number(points || 0),
-            };
-          });
-      }
+      const response = await api.get('/standings/2021');
+      const rows = response?.data?.standings?.[0]?.table ?? [];
+      return rows.map((row) => ({
+        position: Number(row.position ?? 0),
+        team: row.team?.name || '-',
+        crest: row.team?.crest || '',
+        played: Number(row.playedGames ?? 0),
+        goalsFor: Number(row.goalsFor ?? 0),
+        goalsAgainst: Number(row.goalsAgainst ?? 0),
+        won: Number(row.won ?? 0),
+        draw: Number(row.draw ?? 0),
+        lost: Number(row.lost ?? 0),
+        goalDiff: Number(row.goalsFor ?? 0) - Number(row.goalsAgainst ?? 0),
+        points: Number(row.points ?? 0),
+      }));
     },
     2 * 60 * 1000,
   );

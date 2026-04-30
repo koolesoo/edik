@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import LiveScoresPage from './pages/LiveScoresPage';
 import ProfilePage from './pages/profilePage';
 import AccountPage from './pages/AccountPage';
+import MatchStatsPage from './pages/MatchStatsPage';
 import TabBar from './components/TabBar';
 import Tables from './pages/Tables';
 import './App.css';
@@ -36,6 +37,7 @@ const App = () => {
           <Route path="/profile" element={<ProfilePage />} /> 
           <Route path="/account" element={<AccountPage />} />
           <Route path="/tables" element={<Tables />} />
+          <Route path="/match-stats" element={<MatchStatsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <TabBar />

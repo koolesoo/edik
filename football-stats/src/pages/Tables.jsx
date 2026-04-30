@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { getPremierLeagueStandings, getPremierLeagueTable } from '../services/api';
-import CenterLoader from '../components/CenterLoader';
 
 const Tables = () => {
   const [standingsRows, setStandingsRows] = useState([]);
@@ -135,7 +134,25 @@ const Tables = () => {
   };
 
   if (loading) {
-    return <CenterLoader />;
+    return (
+      <motion.main
+        className="page"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      >
+        <section className="section-surface">
+          <div className="skeleton-line skeleton-line--title skeleton-shimmer" />
+          <div className="table-wrap">
+            <div className="table-skeleton">
+              {Array.from({ length: 7 }).map((_, index) => (
+                <div className="table-skeleton-row skeleton-shimmer" key={`table-skeleton-${index}`} />
+              ))}
+            </div>
+          </div>
+        </section>
+      </motion.main>
+    );
   }
 
   return (

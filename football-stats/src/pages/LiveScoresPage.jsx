@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMatches, getPremierLeagueFixtures, getPremierLeagueStandings } from '../services/api';
-import CenterLoader from '../components/CenterLoader';
 
 const DEFAULT_TEAMS = [
   'Arsenal',
@@ -36,6 +35,14 @@ const formatCarouselDate = (isoDate) => {
   const date = new Date(`${isoDate}T12:00:00`);
   if (Number.isNaN(date.getTime())) return isoDate;
   return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+};
+
+const formatCarouselTopLabel = (isoDate, todayIsoDate) => {
+  if (isoDate === todayIsoDate) return 'Сегодня';
+  const date = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  const weekday = date.toLocaleDateString('ru-RU', { weekday: 'short' });
+  return weekday.slice(0, 2).replace('.', '');
 };
 
 const isRateLimitError = (error) => {
@@ -109,6 +116,14 @@ const statusLabelMap = {
   SCHEDULED: 'Скоро',
 };
 
+const statusIconMap = {
+  IN_PLAY: '🔴',
+  PAUSED: '⏸',
+  FINISHED: '✓',
+  TIMED: '🕒',
+  SCHEDULED: '📅',
+};
+
 const LiveScoresPage = ({ mode = 'results' }) => {
   const navigate = useNavigate();
   const { isAuthenticated, currentUser, setFavoriteTeamForCurrentUser } = useAuth();
@@ -122,7 +137,6 @@ const LiveScoresPage = ({ mode = 'results' }) => {
   const [actionMessage, setActionMessage] = useState('');
   const [crestByTeam, setCrestByTeam] = useState({});
   const dateCarouselRef = useRef(null);
-  const manualDateInputRef = useRef(null);
   const fixturesRef = useRef([]);
   const liveStatuses = new Set(['IN_PLAY', 'PAUSED']);
   const isLiveMode = mode === 'live';
@@ -294,11 +308,16 @@ const LiveScoresPage = ({ mode = 'results' }) => {
     setActionMessage(`Команда ${teamName} сохранена в профиль ${currentUser.username}.`);
   };
 
+  const openMatchStats = (match) => {
+    navigate('/match-stats', { state: { match } });
+  };
+
   const parsedFixtures = fixtures.map((fixture) => parseFixture(fixture, crestByTeam));
   const displayFixtures = isLiveMode
     ? parsedFixtures.filter((fixture) => liveStatuses.has(fixture.status))
     : parsedFixtures;
   const carouselDates = buildDateCarousel(selectedDate);
+  const todayIsoDate = toIsoDate(new Date());
 
   useEffect(() => {
     if (isLiveMode) return;
@@ -313,7 +332,37 @@ const LiveScoresPage = ({ mode = 'results' }) => {
     container.scrollTo({ left: activeNode.offsetLeft, behavior: 'smooth' });
   }, [selectedDate, carouselDates, isLiveMode]);
 
-  if (loading) return <CenterLoader />;
+  if (loading) {
+    return (
+      <motion.main
+        className="page"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      >
+        <section className="section-surface section-surface--plain">
+          <div className="skeleton-line skeleton-line--title skeleton-shimmer" />
+          {!isLiveMode ? (
+            <div className="skeleton-date-row">
+              <div className="skeleton-line skeleton-line--pill skeleton-shimmer" />
+              <div className="skeleton-line skeleton-line--pill skeleton-shimmer" />
+              <div className="skeleton-line skeleton-line--pill skeleton-shimmer" />
+              <div className="skeleton-line skeleton-line--circle skeleton-shimmer" />
+            </div>
+          ) : null}
+        </section>
+        <section className="matches-grid">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div className="section-surface fixture-card skeleton-card" key={`matches-skeleton-${index}`}>
+              <div className="skeleton-line skeleton-line--row skeleton-shimmer" />
+              <div className="skeleton-line skeleton-line--row skeleton-shimmer" />
+              <div className="skeleton-line skeleton-line--meta skeleton-shimmer" />
+            </div>
+          ))}
+        </section>
+      </motion.main>
+    );
+  }
   if (error) return <main className="page"><p className="body-lg">Ошибка: {error}</p></main>;
 
   return (
@@ -342,33 +391,20 @@ const LiveScoresPage = ({ mode = 'results' }) => {
                   className={`date-pill ${selectedDate === isoDate ? 'date-pill--active' : ''}`}
                   onClick={() => setSelectedDate(isoDate)}
                 >
-                  {formatCarouselDate(isoDate)}
+                  <span className="date-pill-top">{formatCarouselTopLabel(isoDate, todayIsoDate)}</span>
+                  <span className="date-pill-main">{formatCarouselDate(isoDate)}</span>
                 </button>
               ))}
               </div>
               <button
                 type="button"
                 className="calendar-icon-btn floating-surface"
-                aria-label="Выбрать дату в календаре"
-                onClick={() => {
-                  if (manualDateInputRef.current?.showPicker) {
-                    manualDateInputRef.current.showPicker();
-                  } else {
-                    manualDateInputRef.current?.click();
-                  }
-                }}
+                aria-label="Перейти к сегодняшней дате"
+                onClick={() => setSelectedDate(todayIsoDate)}
               >
                 <span className="calendar-icon" aria-hidden="true" />
               </button>
             </div>
-            <input
-              ref={manualDateInputRef}
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="date-manual-input"
-              aria-label="Ручной выбор даты"
-            />
           </div>
         ) : null}
         {actionMessage ? (
@@ -411,9 +447,21 @@ const LiveScoresPage = ({ mode = 'results' }) => {
                     <p className="fixture-sub">{parsed.kickoffTime || '--:--'}</p>
                     {!isUpcomingFixture(parsed.status) ? (
                       <span className={`status-chip status-chip--${parsed.status}`}>
+                        <span className="status-chip-icon" aria-hidden="true">
+                          {statusIconMap[parsed.status] || '•'}
+                        </span>
                         {statusLabelMap[parsed.status] || parsed.status}
                       </span>
                     ) : null}
+                  </div>
+                  <div className="fixture-actions">
+                    <button
+                      type="button"
+                      className="fixture-stats-btn"
+                      onClick={() => openMatchStats(parsed)}
+                    >
+                      Статистика
+                    </button>
                   </div>
                 </div>
               </motion.div>

@@ -23,7 +23,7 @@
 }
 
 :root {
-  --surface: #000000;
+  --surface: #141414;
   --surface-container-low: #0d0d0d;
   --surface-container-lowest: #090909;
   --surface-container-high: #171717;
@@ -61,7 +61,7 @@ body,
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 15% 10%, rgba(100, 206, 251, 0.08), transparent 40%), var(--surface);
+  background: var(--surface);
   color: var(--text-body);
   font-family: var(--font-body);
 }
