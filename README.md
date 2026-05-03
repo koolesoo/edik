@@ -1,54 +1,44 @@
-# Footstat
+# Статистика РПЛ
 
-Footstat is a football companion app with:
-- a React/Vite frontend (`football-stats`) for live matches, results by date, table, and profile views;
-- a Flask backend for user/profile and cached football data endpoints;
-- PostgreSQL-based cache tables for competitions, fixtures, and standings.
+Веб-приложение **«Статистика РПЛ»**: матчи РПЛ (live и по дням), турнирная таблица, детальная статистика матча и профиль с любимой командой. В браузере вкладка называется **«Статистика РПЛ»** (`football-stats/index.html`).
 
-## Features
+## Состав репозитория
 
-- Live Premier League matches.
-- Results by date for the entire league.
-- League table with team crests and compact stats.
-- Favorite team in profile with quick match overview.
-- Rate-limit-aware behavior with local fallback cache in the UI.
+| Путь | Назначение |
+|------|------------|
+| `football-stats/` | Фронтенд: **React 19**, **Vite 6**, **React Router**, **Framer Motion**, `axios` |
+| `app.py` | **Flask** на порту **5001**: прокси к [LiveScore API](https://www.live-score-api.com/) |
+| `livescore_api.py` | Клиент LiveScore, маршруты вида `/api/livescore/rpl/*` |
+| `requirements.txt` | Зависимости Python для прокси |
+| `scripts/curl_livescore_rpl.sh` | Пример curl к API и к локальному Flask |
+| `.github/workflows/deploy-pages.yml` | **GitHub Actions**: сборка фронта и деплой на **GitHub Pages** |
 
-## Tech Stack
+Корневой `.env` или `football-stats/.env` (и локальные `*.local.env`, не в git): ключи **`LIVESCORE_API_KEY`**, **`LIVESCORE_API_SECRET`**.
 
-- Frontend: React, Vite, React Router, Framer Motion, Axios
-- Backend: Flask, Psycopg2
-- Database: PostgreSQL
-- Deployment: GitHub Pages (frontend static build)
+## Функции фронтенда (кратко)
 
-## Project Structure
+- **Live / Игры** — список матчей, выбор даты, переход к статистике матча.
+- **Таблица** — турнирная таблица РПЛ, параметр `?team=` для фокуса на строке.
+- **Статистика матча** — показатели с API (при наличии id матча), заголовок вкладки: `Хозяева — Гости · Статистика РПЛ`.
+- **Профиль** — любимая команда (локальный «аккаунт»), обзор из таблицы + календарь; карточки матчей: соперник, дата/время, **Дома** (иконка дома) / **В гостях** (иконка автобуса спереди, контур).
+- **Профиль → аккаунт** — имя, вход/регистрация (локально в `localStorage`).
 
-- `football-stats/` — frontend app
-- `app.py` — Flask API
-- `cash.py` — data loading/cache helpers
-- `schema.sql` — DB schema
+Запросы к API идут через **`football-stats/src/services/api.js`**: кэш, TTL, дедупликация (см. `.cursor/rules/minimize-api-requests.mdc`).
 
-## Local Setup
+## Запуск локально
 
-### 1) Backend
+### 1. Прокси (Flask)
 
-Requirements:
-- Python 3.11+
-- PostgreSQL
-
-Steps:
-1. Create and activate virtualenv.
-2. Install Python dependencies you use in your environment (`flask`, `psycopg2-binary`, `flask-cors`, etc.).
-3. Create DB and apply `schema.sql`.
-4. Update DB credentials in `app.py`/`cash.py` (`DB_CONFIG`).
-5. Run backend:
+Из **корня** репозитория:
 
 ```bash
-python app.py
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python app.py
 ```
 
-Default backend URL in this project is `http://127.0.0.1:5001`.
+Сервер слушает **http://127.0.0.1:5001**.
 
-### 2) Frontend
+### 2. Фронтенд (Vite)
 
 ```bash
 cd football-stats
@@ -56,44 +46,41 @@ npm ci
 npm run dev
 ```
 
-## Frontend Environment Variables
+По умолчанию **http://localhost:5173**. В `vite.config.js` настроен прокси **`/api` → `http://127.0.0.1:5001`**, чтобы фронт ходил к Flask без CORS.
 
-`football-stats/src/services/api.js` uses these variables:
-
-- `VITE_FOOTBALL_DATA_API_BASE_URL` (default `/api`)
-- `VITE_PREMIER_LEAGUE_API_BASE_URL` (default `http://127.0.0.1:5000`)
-- `VITE_FOOTBALL_DATA_API_KEY` (for football-data.org requests)
-
-For local development, Vite proxy in `vite.config.js` maps `/api` to football-data.org.
-
-## Build
+## Сборка
 
 ```bash
 cd football-stats
 npm run build
 ```
 
-## GitHub Pages Deployment
+Результат в `football-stats/dist/`. Каталоги `dist/` и кэш Vite не коммитятся (`.gitignore`).
 
-This repository includes workflow:
-- `.github/workflows/deploy-pages.yml`
+## Проверка API
 
-What it does:
-1. Builds `football-stats`.
-2. Publishes `football-stats/dist` to GitHub Pages.
+```bash
+./scripts/curl_livescore_rpl.sh
+```
 
-### Enable Pages
+(при необходимости поправьте URL и ключи под свою среду.)
 
-In GitHub repository settings:
-1. Open **Settings → Pages**.
-2. Set **Build and deployment** source to **GitHub Actions**.
+## Деплой на GitHub Pages (CI)
 
-After pushing to `main`, Pages will deploy automatically.
+Workflow **`.github/workflows/deploy-pages.yml`**:
 
-Expected URL:
-- `https://koolesoo.github.io/edik/`
+- **Триггеры:** push в ветку **`main`**, ручной запуск **Actions → Deploy GitHub Pages → Run workflow**.
+- **Шаги:** `checkout` → Node 20 + `npm ci` в `football-stats/` → `npm run build` → загрузка **`football-stats/dist`** как артефакт Pages → `deploy-pages`.
 
-## Notes
+**Что настроить в репозитории GitHub**
 
-- If external API rate limits occur (429), UI falls back to cached data where available.
-- Backend/API keys in this project are for local/private use; do not commit secrets to public repos.
+1. **Settings → Pages**: источник **GitHub Actions** (не «Deploy from branch» для этого workflow).
+2. Ветка по умолчанию для пушей — **`main`**, иначе поправьте `on.push.branches` в YAML.
+3. Первый деплой после включения Pages может занять 1–2 минуты; URL будет вида `https://<user>.github.io/<repo>/`.
+
+Секреты LiveScore на Pages: фронт обычно собирается **без** секретов в репозитории; ключи либо в **GitHub Secrets** и подстановка на этапе сборки (если добавите шаг), либо отдельный бэкенд. Текущий workflow **только** собирает статический `dist` — для работы API в проде нужен доступный прокси или переменные среды по вашей схеме.
+
+## Полезные ссылки внутри проекта
+
+- Подробности по фронту и скриптам: [`football-stats/README.md`](football-stats/README.md)
+- Правило экономии запросов к API: [`.cursor/rules/minimize-api-requests.mdc`](.cursor/rules/minimize-api-requests.mdc)

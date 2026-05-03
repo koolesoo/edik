@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useRef, useState } from 'react';
 
 const USERS_KEY = 'footstat.users.v1';
 const SESSION_KEY = 'footstat.session.v1';
@@ -16,21 +16,39 @@ const readJson = (key, fallback) => {
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [users, setUsers] = useState(() => readJson(USERS_KEY, []));
+  const [users, setUsers] = useState(() => {
+    const raw = readJson(USERS_KEY, []);
+    return Array.isArray(raw) ? raw : [];
+  });
   const [session, setSession] = useState(() => readJson(SESSION_KEY, null));
+  const usersRef = useRef(users);
+  usersRef.current = users;
 
   const persistUsers = (nextUsers) => {
+    try {
+      localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
+    } catch {
+      throw new Error('Не удалось сохранить в браузере (режим инкогнито, квота или запрет хранилища).');
+    }
     setUsers(nextUsers);
-    localStorage.setItem(USERS_KEY, JSON.stringify(nextUsers));
   };
 
   const persistSession = (nextSession) => {
-    setSession(nextSession);
     if (!nextSession) {
-      localStorage.removeItem(SESSION_KEY);
+      try {
+        localStorage.removeItem(SESSION_KEY);
+      } catch {
+        /* выход из сессии в памяти оставляем даже при ошибке хранилища */
+      }
+      setSession(null);
       return;
     }
-    localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+    } catch {
+      throw new Error('Не удалось сохранить сессию в браузере.');
+    }
+    setSession(nextSession);
   };
 
   const register = ({ username, password }) => {
@@ -39,7 +57,8 @@ export const AuthProvider = ({ children }) => {
     if (!cleanUsername || !cleanPassword) {
       throw new Error('Введите логин и пароль');
     }
-    if (users.some((user) => user.username.toLowerCase() === cleanUsername.toLowerCase())) {
+    const list = Array.isArray(usersRef.current) ? usersRef.current : [];
+    if (list.some((user) => user.username.toLowerCase() === cleanUsername.toLowerCase())) {
       throw new Error('Пользователь уже существует');
     }
     const newUser = {
@@ -49,7 +68,7 @@ export const AuthProvider = ({ children }) => {
       favoriteTeam: '',
       createdAt: new Date().toISOString(),
     };
-    const nextUsers = [...users, newUser];
+    const nextUsers = [...list, newUser];
     persistUsers(nextUsers);
     persistSession({ username: newUser.username });
     return newUser;
@@ -58,7 +77,8 @@ export const AuthProvider = ({ children }) => {
   const login = ({ username, password }) => {
     const cleanUsername = String(username || '').trim();
     const cleanPassword = String(password || '').trim();
-    const found = users.find(
+    const list = Array.isArray(usersRef.current) ? usersRef.current : [];
+    const found = list.find(
       (user) =>
         user.username.toLowerCase() === cleanUsername.toLowerCase() && user.password === cleanPassword,
     );
@@ -79,25 +99,35 @@ export const AuthProvider = ({ children }) => {
   }, [session, users]);
 
   const setFavoriteTeamForCurrentUser = (teamName) => {
-    if (!currentUser) {
+    const uname = session?.username;
+    if (!uname) {
       throw new Error('Нужна авторизация');
     }
-    const nextUsers = users.map((user) =>
-      user.username === currentUser.username ? { ...user, favoriteTeam: teamName } : user,
+    const list = Array.isArray(usersRef.current) ? usersRef.current : [];
+    if (!list.some((u) => u.username === uname)) {
+      throw new Error('Пользователь не найден. Выйдите и войдите снова.');
+    }
+    const nextUsers = list.map((user) =>
+      user.username === uname ? { ...user, favoriteTeam: teamName } : user,
     );
     persistUsers(nextUsers);
   };
 
   const updateDisplayNameForCurrentUser = (displayName) => {
-    if (!currentUser) {
+    const uname = session?.username;
+    if (!uname) {
       throw new Error('Нужна авторизация');
     }
     const cleanName = String(displayName || '').trim();
     if (!cleanName) {
       throw new Error('Имя не может быть пустым');
     }
-    const nextUsers = users.map((user) =>
-      user.username === currentUser.username ? { ...user, displayName: cleanName } : user,
+    const list = Array.isArray(usersRef.current) ? usersRef.current : [];
+    if (!list.some((u) => u.username === uname)) {
+      throw new Error('Пользователь не найден. Выйдите и войдите снова.');
+    }
+    const nextUsers = list.map((user) =>
+      user.username === uname ? { ...user, displayName: cleanName } : user,
     );
     persistUsers(nextUsers);
   };

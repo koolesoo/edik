@@ -1,12 +1,55 @@
-# React + Vite
+# Статистика РПЛ — фронтенд
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Каталог **`football-stats/`** — SPA **«Статистика РПЛ»**: React + Vite. Общая архитектура, Flask-прокси и деплой описаны в [README.md в корне репозитория](../README.md).
 
-Currently, two official plugins are available:
+## Скрипты npm
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Команда | Действие |
+|---------|----------|
+| `npm run dev` | Режим разработки (HMR), порт по умолчанию **5173** |
+| `npm run build` | Production-сборка в **`dist/`** |
+| `npm run preview` | Локальный просмотр собранного `dist` |
+| `npm run lint` | ESLint по проекту |
 
-## Expanding the ESLint configuration
+Перед первым запуском: **`npm ci`** (или `npm install`) в этом каталоге.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Переменные окружения
+
+Файл **`.env`** (не коммитьте с секретами в публичный репозиторий) или **`.env.local`**:
+
+- Переменные для обращения к API / прокси — по мере использования в `src/services/api.js` и `vite.config.js`.
+- Локальные копии безопасных настроек можно держать в **`livescore.local.env`** (см. `.gitignore` в корне и здесь).
+
+Vite подхватывает переменные с префиксом **`VITE_`** для кода на клиенте.
+
+## Структура `src/`
+
+| Путь | Назначение |
+|------|------------|
+| `main.jsx`, `App.jsx` | Точка входа, маршруты, оболочка |
+| `pages/` | Экраны: live/игры, таблица, статистика матча, профиль, аккаунт |
+| `components/` | UI: таббар, скелеты загрузки, чипы, hero и т.д. |
+| `context/` | Контексты (авторизация «локально», карта гербов) |
+| `hooks/` | Например видимость вкладки для ленивых эффектов |
+| `services/api.js` | HTTP, кэш с TTL, общие ключи запросов |
+| `teamNames.js`, `localCrests.js`, `dateTimeMsk.js` | Данные и утилиты |
+
+## Заголовок приложения
+
+- Вкладка браузера по умолчанию: **`Статистика РПЛ`** — задаётся в **`index.html`** (`<title>`), язык документа **`lang="ru"`**.
+- На экране статистики матча заголовок вкладки временно меняется на формат **`Команда А — Команда Б · Статистика РПЛ`** (`MatchStatsPage.jsx`).
+
+## UI профиля (матчи)
+
+В карточке матча для любимой команды:
+
+- **Дома** — контурная иконка дома (`VenueHomeGlyph`).
+- **В гостях** — контурный **автобус спереди** (лобовое стекло + фары), без заливки — `VenueAwayGlyph` в `src/pages/profilePage.jsx`.
+
+## Прокси в dev
+
+`vite.config.js` проксирует **`/api`** на **`http://127.0.0.1:5001`** (Flask из корня репозитория). Без запущенного `app.py` запросы к `/api` в dev вернут ошибку сети.
+
+## Сборка для GitHub Pages
+
+`npm run build` выводит статику в **`dist/`**. Репозиторий использует workflow **Deploy GitHub Pages** (см. корневой README): артефакт деплоя — содержимое **`football-stats/dist`**.

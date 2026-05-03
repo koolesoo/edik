@@ -62,7 +62,7 @@ const AccountPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <section className="section-surface">
+      <section className="section-surface section-surface--plain account-section">
         <div className="profile-top-actions">
           <button
             type="button"

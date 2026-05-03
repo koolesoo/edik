@@ -1,3 +1,5 @@
+# Сборка SPA «Статистика РПЛ» (football-stats) и публикация на GitHub Pages.
+# Требования: Settings → Pages → Source = GitHub Actions; пуш в main или ручной workflow_dispatch.
 name: Deploy GitHub Pages
 
 on:

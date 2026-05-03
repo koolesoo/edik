@@ -1,7 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
+import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
+
+const MotionTabPill = motion.div;
 import { useAuth } from '../context/AuthContext';
-import { getPremierLeagueStandings } from '../services/api';
+import { useCrestMap } from '../context/CrestContext';
+import { preferCrest } from '../localCrests';
 import gameIcon from '../assets/game-icon-v2.svg';
 import liveIcon from '../assets/live-icon.svg';
 import './TabBar.css';
@@ -23,39 +27,49 @@ const iconPaths = {
   team: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M5 20a7 7 0 0 1 14 0',
 };
 
+function TabItemLink({ to, pillTransition, children }) {
+  return (
+    <NavLink to={to} className={({ isActive }) => `tab-item${isActive ? ' active' : ''}`}>
+      {({ isActive }) => (
+        <>
+          {isActive ? (
+            <MotionTabPill
+              layoutId="tab-bar-active-pill"
+              className="tab-item-highlight"
+              transition={pillTransition}
+              aria-hidden="true"
+            />
+          ) : null}
+          {children}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 const TabBar = () => {
   const { currentUser } = useAuth();
-  const [crestByTeam, setCrestByTeam] = useState({});
+  const { crestByTeam } = useCrestMap();
+  const reduceMotion = useReducedMotion();
 
-  useEffect(() => {
-    let cancelled = false;
-    const loadCrests = async () => {
-      try {
-        const standings = await getPremierLeagueStandings();
-        if (!cancelled && Array.isArray(standings)) {
-          const nextMap = standings.reduce((acc, row) => {
-            if (row?.team && row?.crest) acc[row.team] = row.crest;
-            return acc;
-          }, {});
-          setCrestByTeam(nextMap);
-        }
-      } catch (_) {
-        // No-op: fallback icon remains visible.
-      }
-    };
-    loadCrests();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const pillTransition = useMemo(
+    () =>
+      reduceMotion
+        ? { duration: 0.12, ease: 'easeOut' }
+        : { type: 'spring', stiffness: 400, damping: 36, mass: 0.82 },
+    [reduceMotion],
+  );
 
   const favoriteTeam = currentUser?.favoriteTeam || '';
   const favoriteTeamCrest = useMemo(() => {
     if (!favoriteTeam) return '';
-    if (crestByTeam[favoriteTeam]) return crestByTeam[favoriteTeam];
-    const normalized = normalizeTeamKey(favoriteTeam);
-    const matchedEntry = Object.entries(crestByTeam).find(([team]) => normalizeTeamKey(team) === normalized);
-    return matchedEntry?.[1] || '';
+    let fromMap = crestByTeam[favoriteTeam];
+    if (!fromMap) {
+      const normalized = normalizeTeamKey(favoriteTeam);
+      const matchedEntry = Object.entries(crestByTeam).find(([team]) => normalizeTeamKey(team) === normalized);
+      fromMap = matchedEntry?.[1] || '';
+    }
+    return preferCrest(favoriteTeam, fromMap);
   }, [crestByTeam, favoriteTeam]);
 
   const favoriteTeamAbbr = useMemo(
@@ -71,57 +85,47 @@ const TabBar = () => {
   );
 
   return (
-    <div className="tab-bar floating-surface">
-      <NavLink
-        to="/"
-        className={({ isActive }) => (isActive ? 'tab-item active' : 'tab-item')}
-      >
-        <div className="tab-icon">
-          <img src={liveIcon} alt="" className="tab-live-icon" loading="lazy" />
-        </div>
-        <span className="tab-label-full">Live</span>
-        <span className="tab-label-short">Live</span>
-      </NavLink>
+    <LayoutGroup id="main-tab-bar">
+      <div className="tab-bar floating-surface">
+        <TabItemLink to="/" pillTransition={pillTransition}>
+          <div className="tab-icon">
+            <img src={liveIcon} alt="" className="tab-live-icon" loading="lazy" />
+          </div>
+          <span className="tab-label-full">Live</span>
+          <span className="tab-label-short">Live</span>
+        </TabItemLink>
 
-      <NavLink
-        to="/matches"
-        className={({ isActive }) => (isActive ? 'tab-item active' : 'tab-item')}
-      >
-        <div className="tab-icon">
-          <img src={gameIcon} alt="" className="tab-matches-icon" loading="lazy" />
-        </div>
-        <span className="tab-label-full">Все игры</span>
-        <span className="tab-label-short">Игры</span>
-      </NavLink>
+        <TabItemLink to="/matches" pillTransition={pillTransition}>
+          <div className="tab-icon">
+            <img src={gameIcon} alt="" className="tab-matches-icon" loading="lazy" />
+          </div>
+          <span className="tab-label-full">Все игры</span>
+          <span className="tab-label-short">Игры</span>
+        </TabItemLink>
 
-      <NavLink
-        to="/tables"
-        className={({ isActive }) => (isActive ? 'tab-item active' : 'tab-item')}
-      >
-        <div className="tab-icon">
-          <TabIcon path={iconPaths.tables} />
-        </div>
-        <span className="tab-label-full">Таблицы</span>
-        <span className="tab-label-short">Таблица</span>
-      </NavLink>
+        <TabItemLink to="/tables" pillTransition={pillTransition}>
+          <div className="tab-icon">
+            <TabIcon path={iconPaths.tables} />
+          </div>
+          <span className="tab-label-full">Таблицы</span>
+          <span className="tab-label-short">Таблица</span>
+        </TabItemLink>
 
-      <NavLink
-        to="/profile"
-        className={({ isActive }) => (isActive ? 'tab-item active' : 'tab-item')}
-      >
-        <div className="tab-icon">
-          {favoriteTeamCrest ? (
-            <img src={favoriteTeamCrest} alt="" className="tab-team-logo" loading="lazy" />
-          ) : (
-            <span className="tab-team-fallback" aria-hidden="true">
-              {favoriteTeam ? favoriteTeamAbbr : <TabIcon path={iconPaths.team} />}
-            </span>
-          )}
-        </div>
-        <span className="tab-label-full">Команда</span>
-        <span className="tab-label-short">Команда</span>
-      </NavLink>
-    </div>
+        <TabItemLink to="/profile" pillTransition={pillTransition}>
+          <div className="tab-icon">
+            {favoriteTeamCrest ? (
+              <img src={favoriteTeamCrest} alt="" className="tab-team-logo" loading="lazy" />
+            ) : (
+              <span className="tab-team-fallback" aria-hidden="true">
+                {favoriteTeam ? favoriteTeamAbbr : <TabIcon path={iconPaths.team} />}
+              </span>
+            )}
+          </div>
+          <span className="tab-label-full">Команда</span>
+          <span className="tab-label-short">Команда</span>
+        </TabItemLink>
+      </div>
+    </LayoutGroup>
   );
 };
 

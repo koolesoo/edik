@@ -1,56 +1,66 @@
 @font-face {
-  font-family: "Styrene ALC";
-  src: url("/fonts/styrenealc-regular.otf") format("opentype");
+  font-family: "ALS Sector";
+  src: url("/fonts/alssectorregular-regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
-@font-face {
-  font-family: "Styrene ALC";
-  src: url("/fonts/styrenealc-medium.otf") format("opentype");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Styrene ALC";
-  src: url("/fonts/styrenealc-bold.otf") format("opentype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
-  --surface: #141414;
-  --surface-container-low: #0d0d0d;
-  --surface-container-lowest: #090909;
-  --surface-container-high: #171717;
-  --surface-container-highest: #1f1f1f;
-  --surface-bright: rgba(33, 33, 33, 0.6);
-  --outline-variant: rgba(255, 255, 255, 0.15);
-  --text-strong: #ffffff;
-  --text-body: rgba(255, 255, 255, 0.8);
-  --text-muted: rgba(255, 255, 255, 0.62);
-  --primary: #3fb8ef;
-  --primary-container: #64cefb;
-  --on-primary-container: #00111a;
-  --ambient-glow: 0 20px 40px rgba(100, 206, 251, 0.08);
+  /* ДС палитра */
+  --color-ds-primary: #0c1324;
+  --color-secondary: #c8102e;
+  --color-tertiary: #004923;
+  --color-neutral: #f2f2f2;
+
+  --surface: var(--color-ds-primary);
+  --surface-container-lowest: #060910;
+  --surface-container-low: #080d18;
+  --surface-container-high: #142033;
+  --surface-container-highest: #1a2a42;
+  --surface-bright: rgba(242, 242, 242, 0.06);
+  --outline-variant: rgba(242, 242, 242, 0.12);
+
+  --text-strong: var(--color-neutral);
+  --text-body: rgba(242, 242, 242, 0.88);
+  --text-muted: rgba(242, 242, 242, 0.62);
+
+  /* Кнопки / активный таб — вторичный цвет ДС */
+  --primary: var(--color-secondary);
+  --primary-container: #e02039;
+  --on-primary-container: var(--color-neutral);
+
+  --tertiary: var(--color-tertiary);
+  --on-tertiary-bright: #8fe9c1;
+
+  /* Вторичный текст/ссылки на тёмном фоне (вместо бывшего «циана») */
+  --accent-info: #c5d3e8;
+  --accent-info-soft: #a8bad6;
+
+  --ambient-glow: 0 20px 40px rgba(200, 16, 46, 0.12);
+
   --radius-full: 9999px;
   --radius-xl: 3rem;
+  /* Карточки / секции (.section-surface, шторка hero) */
+  --radius-surface: 20px;
   --spacing-1: 0.5rem;
   --spacing-2: 1rem;
   --spacing-3: 1.5rem;
   --spacing-4: 2rem;
-  --font-heading: "Styrene ALC", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Совпадает с верхним/нижним inset .app-shell (hero-bleed компенсирует верх) */
+  --app-shell-padding-y: 12px;
+  --font-heading: "ALS Sector", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-body: "ALS Sector", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+html {
+  font-synthesis: weight style;
 }
 
 html,
@@ -64,6 +74,11 @@ body {
   background: var(--surface);
   color: var(--text-body);
   font-family: var(--font-body);
+}
+
+strong,
+b {
+  font-synthesis: weight;
 }
 
 a {

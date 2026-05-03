@@ -1,6 +1,8 @@
 .DS_Store
 .env
 .env.*
+livescore.local.env
+football-stats/livescore.local.env
 .venv/
 __pycache__/
 *.pyc

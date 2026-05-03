@@ -7,6 +7,7 @@ import AccountPage from './pages/AccountPage';
 import MatchStatsPage from './pages/MatchStatsPage';
 import TabBar from './components/TabBar';
 import Tables from './pages/Tables';
+import { CrestProvider } from './context/CrestContext';
 import './App.css';
 
 const App = () => {
@@ -25,23 +26,25 @@ const App = () => {
 
   return (
     <Router>
-      <div className="app-shell">
-        {!isOnline ? (
-          <div className="network-banner" role="status" aria-live="polite">
-            Нет сети. Данные могут не обновляться.
-          </div>
-        ) : null}
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/matches" element={<LiveScoresPage mode="results" />} />
-          <Route path="/profile" element={<ProfilePage />} /> 
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="/tables" element={<Tables />} />
-          <Route path="/match-stats" element={<MatchStatsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <TabBar />
-      </div>
+      <CrestProvider>
+        <div className="app-shell">
+          {!isOnline ? (
+            <div className="network-banner" role="status" aria-live="polite">
+              Нет сети. Данные могут не обновляться.
+            </div>
+          ) : null}
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/matches" element={<LiveScoresPage mode="results" />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/tables" element={<Tables />} />
+            <Route path="/match-stats" element={<MatchStatsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <TabBar />
+        </div>
+      </CrestProvider>
     </Router>
   );
 };
