@@ -117,10 +117,10 @@ const VenueHomeGlyph = () => (
 
 const VenueAwayGlyph = () => (
   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true" className="profile-fixture-venue-icon">
-    <rect x="5" y="4" width="14" height="16" rx="2.2" stroke="currentColor" strokeWidth="1.75" />
-    <rect x="7" y="6.5" width="10" height="5.5" rx="0.9" stroke="currentColor" strokeWidth="1.5" />
-    <circle cx="9" cy="18.25" r="1.2" stroke="currentColor" strokeWidth="1.3" />
-    <circle cx="15" cy="18.25" r="1.2" stroke="currentColor" strokeWidth="1.3" />
+    <rect x="5" y="4" width="14" height="16" rx="2.2" fill="none" stroke="currentColor" strokeWidth="1.75" />
+    <rect x="7" y="6.5" width="10" height="5.5" rx="0.9" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="9" cy="18.25" r="1.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+    <circle cx="15" cy="18.25" r="1.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
   </svg>
 );
 
