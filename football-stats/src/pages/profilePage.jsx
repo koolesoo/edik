@@ -117,10 +117,11 @@ const VenueHomeGlyph = () => (
 
 const VenueAwayGlyph = () => (
   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true" className="profile-fixture-venue-icon">
-    <rect x="5" y="4" width="14" height="16" rx="2.2" fill="none" stroke="currentColor" strokeWidth="1.75" />
-    <rect x="7" y="6.5" width="10" height="5.5" rx="0.9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    <circle cx="9" cy="18.25" r="1.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
-    <circle cx="15" cy="18.25" r="1.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+    <rect x="4.75" y="3.75" width="14.5" height="16.5" rx="2.35" stroke="currentColor" strokeWidth="1.65" />
+    <rect x="6.75" y="5.85" width="10.5" height="6.25" rx="1" stroke="currentColor" strokeWidth="1.45" />
+    <path d="M5.25 14.75h13.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    <circle cx="8.75" cy="18.15" r="1.15" stroke="currentColor" strokeWidth="1.25" />
+    <circle cx="15.25" cy="18.15" r="1.15" stroke="currentColor" strokeWidth="1.25" />
   </svg>
 );
 
@@ -393,7 +394,7 @@ const ProfilePage = () => {
       if (upcomingFixtures[1]) {
         topRow.push({ fixture: upcomingFixtures[1], key: 'up1' });
         restUpcoming = upcomingFixtures.slice(2);
-        pairLabels = ['Ближайшие матчи', 'Следующий'];
+        pairLabels = ['Ближайшие матчи'];
       }
     }
     return { topRow, restUpcoming, pairLabels };
@@ -717,11 +718,15 @@ const ProfilePage = () => {
                     </p>
                   ) : (
                     <>
-                      {profileFixturesLayout.pairLabels ? (
+                      {profileFixturesLayout.pairLabels?.length === 2 ? (
                         <div className="profile-fixtures-pair-head">
                           <p className="title-sm">{profileFixturesLayout.pairLabels[0]}</p>
                           <p className="title-sm">{profileFixturesLayout.pairLabels[1]}</p>
                         </div>
+                      ) : profileFixturesLayout.pairLabels?.length === 1 ? (
+                        <p className="title-sm profile-fixtures-pair-title-full">
+                          {profileFixturesLayout.pairLabels[0]}
+                        </p>
                       ) : (
                         <p className="title-sm">
                           {lastMatchFixture && profileFixturesLayout.topRow[0]?.key === 'last'

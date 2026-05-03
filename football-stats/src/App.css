@@ -1404,6 +1404,10 @@ button.meta-pill--sync-busy:disabled {
   overflow-wrap: break-word;
 }
 
+.profile-fixtures-pair-title-full {
+  margin: 0 0 0.15rem;
+}
+
 .fixture-list.fixture-list--profile-pair {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;
