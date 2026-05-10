@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 import ApiLastUpdatedChip from '../components/ApiLastUpdatedChip';
@@ -11,6 +11,7 @@ import { preferCrest } from '../localCrests';
 import { translateTeamName, normalizeStandingsTeamKey, teamMatchesFavorite } from '../teamNames';
 import { useCrestMap } from '../context/CrestContext';
 import { useAuth } from '../context/AuthContext';
+import { getStandingsRowsForTournament, listTournaments } from '../services/adminCatalog';
 
 const rowMatchesFocusTeam = (row, rawQuery) => {
   if (!rawQuery || !row?.team) return false;
@@ -120,18 +121,37 @@ const Tables = () => {
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
   const { mergeStandingsRows } = useCrestMap();
+  const [tableSource, setTableSource] = useState('rpl');
+  const [adminTournaments, setAdminTournaments] = useState([]);
+
+  useEffect(() => {
+    setAdminTournaments(listTournaments());
+  }, []);
 
   const tableRows = useMemo(() => normalizeStandings(standingsRows), [standingsRows]);
 
+  const localTableRows = useMemo(() => {
+    if (tableSource === 'rpl') return [];
+    return normalizeStandings(getStandingsRowsForTournament(tableSource));
+  }, [tableSource]);
+
+  const displayRows = tableSource === 'rpl' ? tableRows : localTableRows;
+
+  useEffect(() => {
+    if (tableSource !== 'rpl' && !adminTournaments.some((t) => t.id === tableSource)) {
+      setTableSource('rpl');
+    }
+  }, [adminTournaments, tableSource]);
+
   useLayoutEffect(() => {
-    if (!queryTeam || tableRows.length === 0) return;
-    const hasMatch = tableRows.some((row) => rowMatchesFocusTeam(row, queryTeam));
+    if (!queryTeam || displayRows.length === 0) return;
+    const hasMatch = displayRows.some((row) => rowMatchesFocusTeam(row, queryTeam));
     if (!hasMatch) return;
     const el = document.getElementById('standings-focus-row');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [queryTeam, tableRows]);
+  }, [queryTeam, displayRows]);
 
   const handleRefresh = useCallback(async (opts = {}) => {
     const silent = Boolean(opts.silent);
@@ -162,6 +182,7 @@ const Tables = () => {
   }, [mergeStandingsRows]);
 
   useEffectWhenVisible(() => {
+    setAdminTournaments(listTournaments());
     void handleRefresh({ silent: false });
   }, [handleRefresh]);
 
@@ -205,7 +226,7 @@ const Tables = () => {
     return '-';
   };
 
-  const showTableSkeleton = isRefreshing && tableRows.length === 0 && !error;
+  const showTableSkeleton = tableSource === 'rpl' && isRefreshing && tableRows.length === 0 && !error;
 
   return (
     <motion.main
@@ -217,24 +238,54 @@ const Tables = () => {
       <section className="page-hero">
         <div className="page-hero-card">
           <RplHeroPanel title="Таблица">
-            <ApiLastUpdatedChip
-              timeLabel={lastUpdated}
-              onRefresh={() => void handleRefresh({ silent: false, force: true })}
-              isRefreshing={isRefreshing}
-            />
+            {tableSource === 'rpl' ? (
+              <ApiLastUpdatedChip
+                timeLabel={lastUpdated}
+                onRefresh={() => void handleRefresh({ silent: false, force: true })}
+                isRefreshing={isRefreshing}
+              />
+            ) : (
+              <span className="body-lg tables-local-chip">Локальный турнир</span>
+            )}
           </RplHeroPanel>
-          {error ? (
+          {adminTournaments.length > 0 ? (
+            <div className="tables-source-toggle" role="tablist" aria-label="Источник таблицы">
+              <button
+                type="button"
+                className={`segmented-btn ${tableSource === 'rpl' ? 'segmented-btn--active' : ''}`}
+                onClick={() => setTableSource('rpl')}
+              >
+                РПЛ
+              </button>
+              {adminTournaments.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`segmented-btn ${tableSource === t.id ? 'segmented-btn--active' : ''}`}
+                  onClick={() => setTableSource(t.id)}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {error && tableSource === 'rpl' ? (
             <p className="body-lg action-message" role="alert">
               Ошибка: {error}
             </p>
           ) : null}
-          {!error && !isRefreshing && tableRows.length === 0 ? (
+          {!error && tableSource === 'rpl' && !isRefreshing && tableRows.length === 0 ? (
             <p className="body-lg action-message">Нет строк таблицы. Проверьте соединение с сервером.</p>
+          ) : null}
+          {tableSource !== 'rpl' && !showTableSkeleton && displayRows.length === 0 ? (
+            <p className="body-lg action-message">
+              Нет данных для таблицы. Добавьте команды и завершённые матчи в разделе «Управление данными».
+            </p>
           ) : null}
         </div>
       </section>
       {!error && showTableSkeleton ? <StandingsTableSkeleton /> : null}
-      {!error && !showTableSkeleton && tableRows.length > 0 ? (
+      {!error && !showTableSkeleton && displayRows.length > 0 ? (
         <section className="page-lists-shell">
           <div className="table-wrap">
             <table className="standings-table">
@@ -248,7 +299,7 @@ const Tables = () => {
                 </tr>
               </thead>
               <tbody>
-                {tableRows.map((row, idx) => {
+                {displayRows.map((row, idx) => {
                   const isFocus = rowMatchesFocus(row);
                   return (
                     <tr

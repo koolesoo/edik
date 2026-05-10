@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getMatchStatisticsApiRows, isLocalMatchId } from './adminCatalog';
 import { preferCrest } from '../localCrests';
 import { standingMatchRank } from '../teamNames';
 
@@ -139,10 +140,16 @@ const cachedRequest = async (key, requestFn, maxAgeMs = API_CACHE_TTL_MS) => {
   return promise;
 };
 
-const saveFixturesCache = (teamName, payload) => {
+const fixturesLocalStorageKey = (teamName, includeHistory) => {
+  const teamKey = String(teamName || '').toLowerCase();
+  if (!teamKey) return '';
+  return includeHistory ? teamKey : `${teamKey}__nohist`;
+};
+
+const saveFixturesCache = (teamName, payload, includeHistory = true) => {
   try {
     if (typeof localStorage === 'undefined') return;
-    const teamKey = String(teamName || '').toLowerCase();
+    const teamKey = fixturesLocalStorageKey(teamName, includeHistory);
     if (!teamKey) return;
     const cache = readFixturesCache();
     cache[teamKey] = {
@@ -155,8 +162,8 @@ const saveFixturesCache = (teamName, payload) => {
   }
 };
 
-const getCachedFixtures = (teamName) => {
-  const teamKey = String(teamName || '').toLowerCase();
+const getCachedFixtures = (teamName, includeHistory = true) => {
+  const teamKey = fixturesLocalStorageKey(teamName, includeHistory);
   if (!teamKey) return null;
   const cache = readFixturesCache();
   const cached = cache[teamKey];
@@ -347,13 +354,32 @@ export const dropApiCacheKey = (key) => {
 };
 
 export const dropRplFixturesCache = (teamName) => {
-  const cacheKey = `rpl.fixtures.${String(teamName || '').toLowerCase()}`;
-  inflightFixturesByKey.delete(cacheKey);
-  dropApiCacheKey(cacheKey);
+  const t = String(teamName || '').toLowerCase();
+  if (!t) return;
+  inflightFixturesByKey.delete(`rpl.fixtures.${t}`);
+  inflightFixturesByKey.delete(`rpl.fixtures.${t}.nohist`);
+  dropApiCacheKey(`rpl.fixtures.${t}`);
+  dropApiCacheKey(`rpl.fixtures.${t}.nohist`);
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const cache = readFixturesCache();
+    delete cache[t];
+    delete cache[`${t}__nohist`];
+    localStorage.setItem(FIXTURES_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    /* ignore */
+  }
 };
 
-export const getPremierLeagueFixtures = async (teamName) => {
-  const cacheKey = `rpl.fixtures.${String(teamName || '').toLowerCase()}`;
+/**
+ * Матчи команды РПЛ. `includeHistory: false` — без запроса history на бэке (быстрее; для профиля без «последнего матча»).
+ * @param {string} teamName
+ * @param {{ includeHistory?: boolean }} [opts]
+ */
+export const getPremierLeagueFixtures = async (teamName, opts = {}) => {
+  const includeHistory = opts.includeHistory !== false;
+  const t = String(teamName || '').toLowerCase();
+  const cacheKey = includeHistory ? `rpl.fixtures.${t}` : `rpl.fixtures.${t}.nohist`;
   const cachedByKey = getApiCacheEntry(cacheKey, 10 * 60 * 1000);
   if (cachedByKey?.isFresh && Array.isArray(cachedByKey.payload)) {
     return cachedByKey.payload;
@@ -366,16 +392,19 @@ export const getPremierLeagueFixtures = async (teamName) => {
   const promise = (async () => {
     try {
       const response = await api.get('/livescore/rpl/team-matches', {
-        params: { team: teamName },
+        params: {
+          team: teamName,
+          ...(includeHistory ? {} : { omit_history: 1 }),
+        },
       });
       const payload = response?.data?.matches ?? [];
 
-      saveFixturesCache(teamName, payload);
+      saveFixturesCache(teamName, payload, includeHistory);
       setApiCacheEntry(cacheKey, payload);
       return payload;
     } catch (error) {
       if (isRateLimitError(error)) {
-        const cached = getCachedFixtures(teamName);
+        const cached = getCachedFixtures(teamName, includeHistory);
         if (cached?.length) {
           return cached;
         }
@@ -385,7 +414,7 @@ export const getPremierLeagueFixtures = async (teamName) => {
       if ((isRateLimitError(error) || isOffline() || isBadGateway(error)) && cachedByKey?.payload) {
         return cachedByKey.payload;
       }
-      const cached = getCachedFixtures(teamName);
+      const cached = getCachedFixtures(teamName, includeHistory);
       if (cached?.length) {
         return cached;
       }
@@ -404,6 +433,11 @@ export const getPremierLeagueFixtures = async (teamName) => {
 
 export const getMatchStatistics = async (matchId) => {
   if (matchId == null || matchId === '') return [];
+  const mid = String(matchId);
+  if (isLocalMatchId(mid)) {
+    const rows = getMatchStatisticsApiRows(mid);
+    return Array.isArray(rows) ? rows : [];
+  }
   const key = `rpl.matchStats.${matchId}`;
   try {
     return await cachedRequest(
@@ -451,11 +485,18 @@ export const getPremierLeagueStandings = async () => {
   }
 };
 
-export const getPremierLeagueTeamOverview = async (teamName) => {
-  const normalized = String(teamName || '').toLowerCase();
+/**
+ * @param {string} teamName
+ * @param {{ standings?: object[], includeHistory?: boolean }} [opts]
+ */
+export const getPremierLeagueTeamOverview = async (teamName, opts = {}) => {
+  const includeHistory = opts.includeHistory !== false;
+  const preloaded = opts.standings;
   const [table, fixtures] = await Promise.all([
-    getPremierLeagueStandings(),
-    getPremierLeagueFixtures(teamName),
+    Array.isArray(preloaded) && preloaded.length > 0
+      ? Promise.resolve(preloaded)
+      : getPremierLeagueStandings(),
+    getPremierLeagueFixtures(teamName, { includeHistory }),
   ]);
 
   let standing = null;

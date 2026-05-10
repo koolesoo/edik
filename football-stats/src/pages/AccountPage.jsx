@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
+const MotionMain = motion.main;
 
 const AccountPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, isAuthenticated, register, login, logout, updateDisplayNameForCurrentUser } = useAuth();
   const [mode, setMode] = useState('login');
+  const [registerRole, setRegisterRole] = useState('user');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
@@ -17,13 +21,20 @@ const AccountPage = () => {
     setDisplayName(currentUser?.displayName || '');
   }, [currentUser?.displayName]);
 
+  useEffect(() => {
+    if (location.state?.adminDenied) {
+      setFormError('Доступ только для аккаунта администратора.');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state?.adminDenied, location.pathname, navigate]);
+
   const handleAuthSubmit = async (event) => {
     event.preventDefault();
     setFormError('');
     setFormSuccess('');
     try {
       if (mode === 'register') {
-        await register({ username, password });
+        await register({ username, password, role: registerRole });
         setFormSuccess('Аккаунт создан.');
       } else {
         await login({ username, password });
@@ -56,7 +67,7 @@ const AccountPage = () => {
   };
 
   return (
-    <motion.main
+    <MotionMain
       className="page"
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
@@ -94,6 +105,24 @@ const AccountPage = () => {
                 Регистрация
               </button>
             </div>
+            {mode === 'register' ? (
+              <div className="auth-mode-toggle auth-role-toggle" aria-label="Тип аккаунта">
+                <button
+                  type="button"
+                  className={`segmented-btn ${registerRole === 'user' ? 'segmented-btn--active' : ''}`}
+                  onClick={() => setRegisterRole('user')}
+                >
+                  Пользователь
+                </button>
+                <button
+                  type="button"
+                  className={`segmented-btn ${registerRole === 'admin' ? 'segmented-btn--active' : ''}`}
+                  onClick={() => setRegisterRole('admin')}
+                >
+                  Администратор
+                </button>
+              </div>
+            ) : null}
             <form className="auth-form" onSubmit={handleAuthSubmit}>
               <label className="label-md" htmlFor="accountUsername">Логин</label>
               <input
@@ -121,8 +150,13 @@ const AccountPage = () => {
           </div>
         ) : (
           <div className="profile-stack">
+            {currentUser?.role === 'admin' ? (
+              <Link className="pill-btn pill-btn--secondary admin-entry-link" to="/profile/data">
+                Управление данными
+              </Link>
+            ) : null}
             <form className="auth-form" onSubmit={handleDisplayNameSave}>
-              <label className="label-md" htmlFor="displayName">Имя в профиле</label>
+              <label className="label-md" htmlFor="displayName">Имя</label>
               <input
                 id="displayName"
                 className="pill-input"
@@ -141,7 +175,7 @@ const AccountPage = () => {
         {formError ? <p className="body-lg auth-feedback auth-feedback--error">{formError}</p> : null}
         {formSuccess ? <p className="body-lg auth-feedback auth-feedback--success">{formSuccess}</p> : null}
       </section>
-    </motion.main>
+    </MotionMain>
   );
 };
 

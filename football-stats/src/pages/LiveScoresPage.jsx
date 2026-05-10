@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,11 @@ import { formatDateLongRuMsk, formatDateTimeLineRuMsk, formatMskClockHms, format
 import { useEffectWhenVisible } from '../hooks/useEffectWhenVisible';
 import { preferCrest } from '../localCrests';
 import { translateTeamName, RPL_TEAM_PICKER_DEFAULTS } from '../teamNames';
+import {
+  getAdminFixtureObjectsForIsoDate,
+  getAdminFixtureObjectsLive,
+  listTournaments,
+} from '../services/adminCatalog';
 
 const RESULTS_DAY_RADIUS = 14;
 const FIXTURES_CACHE_PREFIX = 'footstat:fixtures:';
@@ -153,6 +158,10 @@ const parseFixture = (fixture, crestByTeam = {}, options = {}) => {
       status,
       livescoreMatchId: fixture.livescoreMatchId ?? null,
       fixtureId: fixture.fixtureId ?? null,
+      sourceAdmin: Boolean(fixture.sourceAdmin),
+      adminTournamentId:
+        fixture.adminTournamentId != null ? String(fixture.adminTournamentId) : '',
+      adminTournamentName: String(fixture.adminTournamentName || ''),
     };
   }
 
@@ -192,6 +201,9 @@ const parseFixture = (fixture, crestByTeam = {}, options = {}) => {
     utcDate: '',
     livescoreMatchId: null,
     fixtureId: null,
+    sourceAdmin: false,
+    adminTournamentId: '',
+    adminTournamentName: '',
   };
 };
 
@@ -252,6 +264,8 @@ const LiveScoresPage = ({ mode = 'results' }) => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
+  const [gamesSource, setGamesSource] = useState('rpl');
+  const [adminTournaments, setAdminTournaments] = useState([]);
   const liveStatuses = new Set(['IN_PLAY', 'PAUSED']);
   const isLiveMode = mode === 'live';
   const cacheKey = isLiveMode
@@ -263,17 +277,25 @@ const LiveScoresPage = ({ mode = 'results' }) => {
   }, [fixtures]);
 
   useEffect(() => {
+    setAdminTournaments(listTournaments());
+  }, []);
+
+  useEffect(() => {
+    if (gamesSource !== 'rpl' && !adminTournaments.some((t) => t.id === gamesSource)) {
+      setGamesSource('rpl');
+    }
+  }, [adminTournaments, gamesSource]);
+
+  useEffect(() => {
     try {
       const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-      if (Array.isArray(cached) && cached.length > 0) {
-        setFixtures(cached);
-      } else {
-        setFixtures([]);
-      }
+      const apiOnly = Array.isArray(cached) ? cached.filter((row) => row && !row.sourceAdmin) : [];
+      const adminExtra = isLiveMode ? getAdminFixtureObjectsLive() : getAdminFixtureObjectsForIsoDate(selectedDate);
+      setFixtures([...apiOnly, ...adminExtra]);
     } catch (_) {
       setFixtures([]);
     }
-  }, [cacheKey]);
+  }, [cacheKey, isLiveMode, selectedDate]);
 
   const handleRefresh = useCallback(async (opts = {}) => {
     const force = Boolean(opts.force);
@@ -295,13 +317,15 @@ const LiveScoresPage = ({ mode = 'results' }) => {
       const data = isLiveMode
         ? await getRplLiveMatches()
         : await getMatches(0, selectedDate, selectedDate);
-      const normalized = normalizeFixturesPayload(data);
-      setFixtures(normalized);
+      const apiNormalized = normalizeFixturesPayload(data);
+      const adminExtra = isLiveMode ? getAdminFixtureObjectsLive() : getAdminFixtureObjectsForIsoDate(selectedDate);
+      const merged = [...apiNormalized, ...adminExtra];
+      setFixtures(merged);
       setLastUpdated(formatMskClockHms());
       setError(null);
       setActionMessage('');
       try {
-        localStorage.setItem(cacheKey, JSON.stringify(normalized));
+        localStorage.setItem(cacheKey, JSON.stringify(apiNormalized));
       } catch (_) {
         // Ignore storage failures.
       }
@@ -315,7 +339,9 @@ const LiveScoresPage = ({ mode = 'results' }) => {
           cached = [];
         }
         if (Array.isArray(cached) && cached.length > 0) {
-          setFixtures(cached);
+          const apiOnly = cached.filter((row) => row && !row.sourceAdmin);
+          const adminExtra = isLiveMode ? getAdminFixtureObjectsLive() : getAdminFixtureObjectsForIsoDate(selectedDate);
+          setFixtures([...apiOnly, ...adminExtra]);
         }
         setError(null);
         setActionMessage('Показываем кэшированные данные.');
@@ -331,6 +357,7 @@ const LiveScoresPage = ({ mode = 'results' }) => {
   }, [cacheKey, isLiveMode, mergeStandingsRows, selectedDate]);
 
   useEffectWhenVisible(() => {
+    setAdminTournaments(listTournaments());
     void handleRefresh();
   }, [cacheKey, handleRefresh]);
 
@@ -404,7 +431,140 @@ const LiveScoresPage = ({ mode = 'results' }) => {
       liveStatuses.has(fixture.status) || fixture.status === 'FINISHED',
     )
     : parsedFixtures;
+  const rplParsed = displayFixtures.filter((p) => !p.sourceAdmin);
+  const adminParsed = displayFixtures.filter((p) => p.sourceAdmin);
+  const adminGrouped = useMemo(() => {
+    const map = new Map();
+    for (const p of adminParsed) {
+      const tid = String(p.adminTournamentId || '_');
+      const label = String(p.adminTournamentName || 'Турнир').trim() || 'Турнир';
+      if (!map.has(tid)) map.set(tid, { tid, label, fixtures: [] });
+      map.get(tid).fixtures.push(p);
+    }
+    return Array.from(map.values());
+  }, [adminParsed]);
+  const visibleRplParsed = gamesSource === 'rpl' ? rplParsed : [];
+  /** Только выбранный сегмент: РПЛ — только API; турнир админа — только его матчи */
+  const visibleAdminGrouped =
+    gamesSource === 'rpl'
+      ? []
+      : adminGrouped.filter((g) => g.tid === String(gamesSource));
+  const hasVisibleFixtures =
+    visibleRplParsed.length > 0 || visibleAdminGrouped.some((g) => g.fixtures.length > 0);
   const showFixtureSkeleton = isRefreshing && displayFixtures.length === 0 && !error;
+
+  const renderFixtureCard = (parsed, index, rowKey) => {
+    const homeScoreNum = Number(parsed.homeScore);
+    const awayScoreNum = Number(parsed.awayScore);
+    const hasNumericScore = Number.isFinite(homeScoreNum) && Number.isFinite(awayScoreNum);
+    const homeWon = hasNumericScore ? homeScoreNum > awayScoreNum : false;
+    const awayWon = hasNumericScore ? awayScoreNum > homeScoreNum : false;
+    const homeDisplayName = translateTeamName(parsed.homeTeam || 'Home');
+    const awayDisplayName = translateTeamName(parsed.awayTeam || 'Away');
+    const homeShort = String(homeDisplayName || 'HM')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase();
+    const awayShort = String(awayDisplayName || 'AW')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase();
+    const rawStatus = String(parsed.status || 'TIMED').toUpperCase();
+    const statusPill = STATUS_PILL_LABELS[rawStatus] || rawStatus;
+    const dateDisplay = (() => {
+      if (parsed.kickoffTime && parsed.kickoffTime !== '--:--') return parsed.kickoffTime;
+      if (parsed.dateOnly && parsed.dateOnly !== 'Дата уточняется') return parsed.dateOnly;
+      if (parsed.date && parsed.date !== 'Дата уточняется') return parsed.date;
+      return '—';
+    })();
+    const kickoffIso = (() => {
+      const raw = parsed.utcDate;
+      if (!raw) return '';
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+    })();
+    return (
+      <motion.div
+        key={rowKey}
+        className={`match-row${parsed.sourceAdmin ? ' match-row--admin-fixture' : ''}`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30, delay: index * 0.2 }}
+      >
+        <div
+          className="fixture-match-card fixture-match-card--clickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => openMatchStats(parsed)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              openMatchStats(parsed);
+            }
+          }}
+          aria-label={`Открыть статистику матча ${homeDisplayName} — ${awayDisplayName}`}
+        >
+          <div className="match-stats-scoreboard fixture-card-scoreboard fixture-card-scoreboard--league-rows">
+            <div className="match-stats-emblem fixture-card-emblem fixture-card-emblem--home">
+              {parsed.homeCrest ? (
+                <img src={parsed.homeCrest} alt="" className="match-stats-emblem-img" loading="lazy" />
+              ) : (
+                <span className="match-stats-emblem-fallback" aria-hidden="true">
+                  {homeShort || 'HM'}
+                </span>
+              )}
+            </div>
+            <div className="fixture-card-center-stack">
+              <div className="match-stats-score-mid fixture-card-score-mid" aria-label="Счёт">
+                <span className="match-stats-score-num">
+                  {parsed.homeScore ?? '-'}
+                  {' '}
+                  :
+                  {' '}
+                  {parsed.awayScore ?? '-'}
+                </span>
+              </div>
+            </div>
+            <div className="match-stats-emblem fixture-card-emblem fixture-card-emblem--away">
+              {parsed.awayCrest ? (
+                <img src={parsed.awayCrest} alt="" className="match-stats-emblem-img" loading="lazy" />
+              ) : (
+                <span className="match-stats-emblem-fallback" aria-hidden="true">
+                  {awayShort || 'AW'}
+                </span>
+              )}
+            </div>
+            <span
+              className={`match-stats-abbr fixture-card-abbr--home ${homeWon ? 'fixture-card-abbr--strong' : ''} ${awayWon ? 'fixture-card-abbr--muted' : ''}`}
+            >
+              {homeDisplayName}
+            </span>
+            <div className="fixture-card-status-slot">
+              <time className="match-stats-datetime fixture-card-datetime fixture-card-datetime--by-status" dateTime={kickoffIso || undefined}>
+                {dateDisplay}
+              </time>
+              <span
+                className={`match-stats-status-pill ${rawStatus === 'FINISHED' ? 'match-stats-status-pill--finished' : ''}`}
+              >
+                {statusPill}
+              </span>
+            </div>
+            <span
+              className={`match-stats-abbr fixture-card-abbr--away ${awayWon ? 'fixture-card-abbr--strong' : ''} ${homeWon ? 'fixture-card-abbr--muted' : ''}`}
+            >
+              {awayDisplayName}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
   const carouselDates = buildDateCarousel(selectedDate);
   const todayIsoDate = toIsoDate(new Date());
   const selectedDateObj = new Date(`${selectedDate}T12:00:00`);
@@ -435,12 +595,37 @@ const LiveScoresPage = ({ mode = 'results' }) => {
       <section className="page-hero">
         <div className="page-hero-card">
           <RplHeroPanel title={isLiveMode ? 'Live-матчи' : 'Игры'}>
-            <ApiLastUpdatedChip
-              timeLabel={lastUpdated}
-              onRefresh={() => void handleRefresh({ force: true })}
-              isRefreshing={isRefreshing}
-            />
+            {gamesSource === 'rpl' ? (
+              <ApiLastUpdatedChip
+                timeLabel={lastUpdated}
+                onRefresh={() => void handleRefresh({ force: true })}
+                isRefreshing={isRefreshing}
+              />
+            ) : (
+              <span className="body-lg tables-local-chip">Локальный турнир</span>
+            )}
           </RplHeroPanel>
+          {adminTournaments.length > 0 ? (
+            <div className="tables-source-toggle" role="tablist" aria-label="Источник расписания">
+              <button
+                type="button"
+                className={`segmented-btn ${gamesSource === 'rpl' ? 'segmented-btn--active' : ''}`}
+                onClick={() => setGamesSource('rpl')}
+              >
+                РПЛ
+              </button>
+              {adminTournaments.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`segmented-btn ${gamesSource === t.id ? 'segmented-btn--active' : ''}`}
+                  onClick={() => setGamesSource(t.id)}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {error ? (
             <p className="body-lg action-message" role="alert">
               Ошибка: {error}
@@ -488,126 +673,30 @@ const LiveScoresPage = ({ mode = 'results' }) => {
         {showFixtureSkeleton ? (
           <FixtureListSkeleton rows={isLiveMode ? 4 : 6} />
         ) : null}
-        {!showFixtureSkeleton && displayFixtures.length > 0 ? (
-          displayFixtures.map((parsed, index) => {
-            const homeScoreNum = Number(parsed.homeScore);
-            const awayScoreNum = Number(parsed.awayScore);
-            const hasNumericScore = Number.isFinite(homeScoreNum) && Number.isFinite(awayScoreNum);
-            const homeWon = hasNumericScore ? homeScoreNum > awayScoreNum : false;
-            const awayWon = hasNumericScore ? awayScoreNum > homeScoreNum : false;
-            const homeDisplayName = translateTeamName(parsed.homeTeam || 'Home');
-            const awayDisplayName = translateTeamName(parsed.awayTeam || 'Away');
-            const homeShort = String(homeDisplayName || 'HM')
-              .split(' ')
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((part) => part[0])
-              .join('')
-              .toUpperCase();
-            const awayShort = String(awayDisplayName || 'AW')
-              .split(' ')
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((part) => part[0])
-              .join('')
-              .toUpperCase();
-            const rawStatus = String(parsed.status || 'TIMED').toUpperCase();
-            const statusPill = STATUS_PILL_LABELS[rawStatus] || rawStatus;
-            const dateDisplay = (() => {
-              if (parsed.kickoffTime && parsed.kickoffTime !== '--:--') return parsed.kickoffTime;
-              if (parsed.dateOnly && parsed.dateOnly !== 'Дата уточняется') return parsed.dateOnly;
-              if (parsed.date && parsed.date !== 'Дата уточняется') return parsed.date;
-              return '—';
-            })();
-            const kickoffIso = (() => {
-              const raw = parsed.utcDate;
-              if (!raw) return '';
-              const d = new Date(raw);
-              return Number.isNaN(d.getTime()) ? '' : d.toISOString();
-            })();
-            return (
-              <motion.div
-                key={`${parsed.teams}-${parsed.date}-${index}`}
-                className="match-row"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30, delay: index * 0.2 }}
-              >
-                <div
-                  className="fixture-match-card fixture-match-card--clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openMatchStats(parsed)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      openMatchStats(parsed);
-                    }
-                  }}
-                  aria-label={`Открыть статистику матча ${homeDisplayName} — ${awayDisplayName}`}
-                >
-                  <div className="match-stats-scoreboard fixture-card-scoreboard fixture-card-scoreboard--league-rows">
-                    <div className="match-stats-emblem fixture-card-emblem fixture-card-emblem--home">
-                      {parsed.homeCrest ? (
-                        <img src={parsed.homeCrest} alt="" className="match-stats-emblem-img" loading="lazy" />
-                      ) : (
-                        <span className="match-stats-emblem-fallback" aria-hidden="true">
-                          {homeShort || 'HM'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="fixture-card-center-stack">
-                      <div className="match-stats-score-mid fixture-card-score-mid" aria-label="Счёт">
-                        <span className="match-stats-score-num">
-                          {parsed.homeScore ?? '-'}
-                          {' '}
-                          :
-                          {' '}
-                          {parsed.awayScore ?? '-'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="match-stats-emblem fixture-card-emblem fixture-card-emblem--away">
-                      {parsed.awayCrest ? (
-                        <img src={parsed.awayCrest} alt="" className="match-stats-emblem-img" loading="lazy" />
-                      ) : (
-                        <span className="match-stats-emblem-fallback" aria-hidden="true">
-                          {awayShort || 'AW'}
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      className={`match-stats-abbr fixture-card-abbr--home ${homeWon ? 'fixture-card-abbr--strong' : ''} ${awayWon ? 'fixture-card-abbr--muted' : ''}`}
-                    >
-                      {homeDisplayName}
-                    </span>
-                    <div className="fixture-card-status-slot">
-                      <time className="match-stats-datetime fixture-card-datetime fixture-card-datetime--by-status" dateTime={kickoffIso || undefined}>
-                        {dateDisplay}
-                      </time>
-                      <span
-                        className={`match-stats-status-pill ${rawStatus === 'FINISHED' ? 'match-stats-status-pill--finished' : ''}`}
-                      >
-                        {statusPill}
-                      </span>
-                    </div>
-                    <span
-                      className={`match-stats-abbr fixture-card-abbr--away ${awayWon ? 'fixture-card-abbr--strong' : ''} ${homeWon ? 'fixture-card-abbr--muted' : ''}`}
-                    >
-                      {awayDisplayName}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })
+        {!showFixtureSkeleton && hasVisibleFixtures ? (
+          <>
+            {visibleRplParsed.map((parsed, index) => renderFixtureCard(parsed, index, `rpl-${parsed.livescoreMatchId || parsed.teams}-${index}`))}
+            {visibleAdminGrouped.map((group) => (
+              <React.Fragment key={group.tid}>
+                {group.fixtures.map((parsed, index) =>
+                  renderFixtureCard(
+                    parsed,
+                    index,
+                    `adm-${group.tid}-${parsed.livescoreMatchId || parsed.teams}-${index}`,
+                  ),
+                )}
+              </React.Fragment>
+            ))}
+          </>
         ) : !showFixtureSkeleton ? (
           <div className="empty-state-card">
             <p className="headline-md">Матчей пока нет</p>
             <p className="body-lg">
               {isLiveMode
                 ? 'Сейчас нет идущих матчей — зайдите позже'
-                : 'На выбранный день матчей нет – выберите другую дату'}
+                : gamesSource !== 'rpl'
+                  ? 'На выбранный день в этом турнире матчей нет — выберите другую дату или источник РПЛ.'
+                  : 'На выбранный день матчей нет – выберите другую дату'}
             </p>
           </div>
         ) : null}

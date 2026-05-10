@@ -426,7 +426,7 @@ def team_id_and_name_from_table_api(team_name: str) -> tuple[int | None, str]:
     return best[1], best[2]
 
 
-def fetch_rpl_team_window(team_name: str) -> tuple[list[dict], str | None]:
+def fetch_rpl_team_window(team_name: str, *, include_history: bool = True) -> tuple[list[dict], str | None]:
     cid = _competition_id()
     tid, _canonical = team_id_and_name_from_table_api(team_name)
     if not tid:
@@ -444,11 +444,12 @@ def fetch_rpl_team_window(team_name: str) -> tuple[list[dict], str | None]:
             if isinstance(m, dict):
                 add(normalize_livescore_match(m))
 
-    hist, herr = livescore_get("matches/history.json", {"competition_id": cid, "team_id": tid, "lang": "ru"})
-    if not herr and hist:
-        for m in _as_list(hist.get("data", {}).get("match")):
-            if isinstance(m, dict):
-                add(normalize_livescore_match(m))
+    if include_history:
+        hist, herr = livescore_get("matches/history.json", {"competition_id": cid, "team_id": tid, "lang": "ru"})
+        if not herr and hist:
+            for m in _as_list(hist.get("data", {}).get("match")):
+                if isinstance(m, dict):
+                    add(normalize_livescore_match(m))
 
     for page in range(1, 25):
         data, ferr = livescore_get(

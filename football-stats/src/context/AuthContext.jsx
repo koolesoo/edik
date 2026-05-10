@@ -1,7 +1,35 @@
 import React, { createContext, useContext, useMemo, useRef, useState } from 'react';
 
-const USERS_KEY = 'footstat.users.v1';
+const USERS_KEY = 'footstat.users.v2';
+const LEGACY_USERS_KEY = 'footstat.users.v1';
 const SESSION_KEY = 'footstat.session.v1';
+
+const migrateUsersFromStorage = () => {
+  try {
+    const rawV2 = localStorage.getItem(USERS_KEY);
+    if (rawV2) {
+      const parsed = JSON.parse(rawV2);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+    const rawV1 = localStorage.getItem(LEGACY_USERS_KEY);
+    if (!rawV1) return [];
+    const parsed = JSON.parse(rawV1);
+    if (!Array.isArray(parsed)) return [];
+    const merged = parsed.map((u) => ({
+      ...u,
+      role: u.role === 'admin' ? 'admin' : 'user',
+    }));
+    localStorage.setItem(USERS_KEY, JSON.stringify(merged));
+    return merged;
+  } catch {
+    return [];
+  }
+};
+
+const normalizeUser = (user) => ({
+  ...user,
+  role: user.role === 'admin' ? 'admin' : 'user',
+});
 
 const readJson = (key, fallback) => {
   try {
@@ -17,8 +45,8 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [users, setUsers] = useState(() => {
-    const raw = readJson(USERS_KEY, []);
-    return Array.isArray(raw) ? raw : [];
+    const list = migrateUsersFromStorage();
+    return Array.isArray(list) ? list.map(normalizeUser) : [];
   });
   const [session, setSession] = useState(() => readJson(SESSION_KEY, null));
   const usersRef = useRef(users);
@@ -51,12 +79,13 @@ export const AuthProvider = ({ children }) => {
     setSession(nextSession);
   };
 
-  const register = ({ username, password }) => {
+  const register = ({ username, password, role: registrationRole }) => {
     const cleanUsername = String(username || '').trim();
     const cleanPassword = String(password || '').trim();
     if (!cleanUsername || !cleanPassword) {
       throw new Error('Введите логин и пароль');
     }
+    const role = registrationRole === 'admin' ? 'admin' : 'user';
     const list = Array.isArray(usersRef.current) ? usersRef.current : [];
     if (list.some((user) => user.username.toLowerCase() === cleanUsername.toLowerCase())) {
       throw new Error('Пользователь уже существует');
@@ -66,6 +95,7 @@ export const AuthProvider = ({ children }) => {
       displayName: cleanUsername,
       password: cleanPassword,
       favoriteTeam: '',
+      role,
       createdAt: new Date().toISOString(),
     };
     const nextUsers = [...list, newUser];

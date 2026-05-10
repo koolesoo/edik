@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-
-const MotionTabPill = motion.div;
 import { useAuth } from '../context/AuthContext';
 import { useCrestMap } from '../context/CrestContext';
 import { preferCrest } from '../localCrests';
 import gameIcon from '../assets/game-icon-v2.svg';
 import liveIcon from '../assets/live-icon.svg';
 import './TabBar.css';
+
+const MotionTabPill = motion.div;
 
 const TabIcon = ({ path }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
@@ -27,9 +27,9 @@ const iconPaths = {
   team: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M5 20a7 7 0 0 1 14 0',
 };
 
-function TabItemLink({ to, pillTransition, children }) {
+function TabItemLink({ to, end, pillTransition, children }) {
   return (
-    <NavLink to={to} className={({ isActive }) => `tab-item${isActive ? ' active' : ''}`}>
+    <NavLink end={end} to={to} className={({ isActive }) => `tab-item${isActive ? ' active' : ''}`}>
       {({ isActive }) => (
         <>
           {isActive ? (
@@ -111,7 +111,7 @@ const TabBar = () => {
           <span className="tab-label-short">Таблица</span>
         </TabItemLink>
 
-        <TabItemLink to="/profile" pillTransition={pillTransition}>
+        <TabItemLink to="/profile" end pillTransition={pillTransition}>
           <div className="tab-icon">
             {favoriteTeamCrest ? (
               <img src={favoriteTeamCrest} alt="" className="tab-team-logo" loading="lazy" />

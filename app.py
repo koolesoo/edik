@@ -93,7 +93,8 @@ def livescore_rpl_team_matches():
         team = request.args.get("team", "").strip()
         if not team:
             return jsonify({"error": "Укажите параметр team.", "matches": []}), 400
-        matches, err = livescore_api.fetch_rpl_team_window(team)
+        omit_hist = request.args.get("omit_history", "").strip().lower() in ("1", "true", "yes")
+        matches, err = livescore_api.fetch_rpl_team_window(team, include_history=not omit_hist)
         if err:
             return jsonify({"error": err, "matches": matches or []}), 502
         return jsonify({"matches": matches})

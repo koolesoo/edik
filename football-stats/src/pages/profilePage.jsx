@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCrestMap } from '../context/CrestContext';
@@ -15,8 +14,6 @@ import {
 } from '../services/api';
 import { preferCrest } from '../localCrests';
 import { translateTeamName, RPL_TEAM_PICKER_DEFAULTS, teamMatchesFavorite } from '../teamNames';
-
-const RPL_BALL_ICON_URL = 'https://cdn.premierliga.ru/resources/images/icons/match/ball.svg';
 
 const normalizeTeamKey = (name) => String(name || '')
   .toLowerCase()
@@ -206,7 +203,7 @@ const parseFixtureLine = (line, crestByTeam = {}) => {
   };
 };
 
-const ProfilePage = () => {
+const ProfileTeamPage = () => {
   const { currentUser, isAuthenticated, setFavoriteTeamForCurrentUser } = useAuth();
   const [teamOverview, setTeamOverview] = useState(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -322,7 +319,10 @@ const ProfilePage = () => {
         mergeStandingsRows(standings);
       }
       if (currentUser?.favoriteTeam) {
-        const data = await getPremierLeagueTeamOverview(currentUser.favoriteTeam);
+        const data = await getPremierLeagueTeamOverview(currentUser.favoriteTeam, {
+          standings,
+          includeHistory: false,
+        });
         setTeamOverview(data);
         writeProfileOverviewCache(currentUser.username, currentUser.favoriteTeam, data);
       } else {
@@ -577,45 +577,16 @@ const ProfilePage = () => {
   };
 
   return (
-    <motion.main
-      className="page page--hero-bleed"
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-    >
-      <section className="page-hero">
-        <div className="page-hero-card">
-          <Link to="/account" className="profile-hero-sheet" aria-label="Открыть профиль">
-            <div className="profile-hero-sheet-row">
-              <span className="profile-hero-avatar" aria-hidden="true">
-                <img
-                  className="profile-hero-ball-img"
-                  src={RPL_BALL_ICON_URL}
-                  alt=""
-                  width={28}
-                  height={28}
-                  loading="eager"
-                  decoding="async"
-                />
-              </span>
-              <div className="profile-hero-sheet-text">
-                <span className="profile-hero-name">
-                  {isAuthenticated ? (currentUser.displayName || currentUser.username) : 'Профиль'}
-                </span>
-                <span className="profile-hero-edit-label">Редактировать</span>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </section>
+    <>
       {!isAuthenticated ? (
         <section className="section-surface section-surface--plain profile-after-hero">
-          <div className="profile-empty-state">
+          <div className="profile-empty-state profile-empty-state--guest">
             <p className="body-lg">
-              Авторизуйтесь в экране профиля, чтобы привязать любимый клуб и видеть его матчи.
+              <strong>Как это работает?</strong>{' '}
+              Выберите любимую команду и следите за её результатами и расписанием
             </p>
-            <Link to="/matches" className="pill-btn pill-btn--secondary profile-empty-state-cta">
-              Перейти к матчам
+            <Link to="/account" className="pill-btn pill-btn--primary profile-empty-state-cta">
+              К входу
             </Link>
           </div>
         </section>
@@ -799,14 +770,6 @@ const ProfilePage = () => {
         )}
       </section>
       ) : null}
-      {!hasFavoriteTeam ? (
-        <section className="section-surface page-lists-shell">
-          <p className="body-lg">
-            Как это работает: выберите любимую команду в профиле. Здесь же можно поменять выбор
-            в любой момент — команда сразу появится в профиле со статистикой и ближайшими матчами.
-          </p>
-        </section>
-      ) : null}
       {isChangeFavoriteOpen ? (
         <div className="sheet-backdrop" role="presentation" onClick={() => setIsChangeFavoriteOpen(false)}>
           <section
@@ -872,8 +835,8 @@ const ProfilePage = () => {
           </section>
         </div>
       ) : null}
-    </motion.main>
+    </>
   );
 };
 
-export default ProfilePage;
+export default ProfileTeamPage;

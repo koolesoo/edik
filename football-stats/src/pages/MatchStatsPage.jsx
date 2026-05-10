@@ -3,11 +3,50 @@ import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { formatDateTimeLineRuMsk, formatDayMonthRuMsk, formatTimeShortRuMsk } from '../dateTimeMsk';
 import { MatchStatsListSkeleton } from '../components/DataSkeletons';
+import { isLocalMatchId } from '../services/adminCatalog';
 import { dropApiCacheKey, getMatchStatistics } from '../services/api';
 import { preferCrest } from '../localCrests';
 import { translateTeamName } from '../teamNames';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+/** Целое число голов из счёта карточки матча (не число → 0). */
+const parseGoalCount = (raw) => {
+  const n = Number.parseInt(String(raw ?? '').replace(/\s+/g, ''), 10);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+};
+
+/**
+ * Инварианты: удары в створ ≤ всего ударов; удары в створ ≥ голов; всего ударов ≥ голов.
+ * @param {StatRow[]} rows
+ * @param {unknown} homeScoreRaw
+ * @param {unknown} awayScoreRaw
+ * @returns {StatRow[]}
+ */
+const normalizeShotsAgainstGoals = (rows, homeScoreRaw, awayScoreRaw) => {
+  const gHome = parseGoalCount(homeScoreRaw);
+  const gAway = parseGoalCount(awayScoreRaw);
+  const shotRow = rows.find((r) => r.key === 'shots');
+  const otRow = rows.find((r) => r.key === 'on_target');
+  if (!shotRow || !otRow) return rows;
+
+  let homeShots = Math.max(0, Math.round(Number(shotRow.home) || 0));
+  let awayShots = Math.max(0, Math.round(Number(shotRow.away) || 0));
+  let homeOt = Math.max(0, Math.round(Number(otRow.home) || 0));
+  let awayOt = Math.max(0, Math.round(Number(otRow.away) || 0));
+
+  homeShots = Math.max(homeShots, gHome);
+  awayShots = Math.max(awayShots, gAway);
+  homeOt = Math.max(Math.min(homeOt, homeShots), gHome);
+  awayOt = Math.max(Math.min(awayOt, awayShots), gAway);
+
+  return rows.map((row) => {
+    if (row.key === 'shots') return { ...row, home: homeShots, away: awayShots };
+    if (row.key === 'on_target') return { ...row, home: homeOt, away: awayOt };
+    return row;
+  });
+};
 
 const hashSeed = (text) => {
   let hash = 0;
@@ -118,8 +157,16 @@ const buildFakeStats = (homeTeam, awayTeam, seedText) => {
   const homeShots = clamp(11 + Math.round(delta / 2), 8, 16);
   const awayShots = clamp(11 - Math.round(delta / 2), 8, 16);
 
-  const homeOnTarget = clamp(Math.round(homeShots * (0.34 + ((seed % 3) * 0.03))), 2, Math.max(2, homeShots - 2));
-  const awayOnTarget = clamp(Math.round(awayShots * (0.34 + (((seed + 1) % 3) * 0.03))), 2, Math.max(2, awayShots - 2));
+  const homeOnTarget = clamp(
+    Math.round(homeShots * (0.34 + ((seed % 3) * 0.03))),
+    0,
+    homeShots,
+  );
+  const awayOnTarget = clamp(
+    Math.round(awayShots * (0.34 + (((seed + 1) % 3) * 0.03))),
+    0,
+    awayShots,
+  );
 
   const homeCorners = clamp(5 + Math.round(delta / 3), 3, 9);
   const awayCorners = clamp(5 - Math.round(delta / 3), 3, 9);
@@ -260,7 +307,12 @@ const MatchStatsPage = () => {
   const homeShort = String(homeDisplayName).split(' ').filter(Boolean).slice(0, 2).map((v) => v[0]).join('').toUpperCase();
   const awayShort = String(awayDisplayName).split(' ').filter(Boolean).slice(0, 2).map((v) => v[0]).join('').toUpperCase();
   const returnMode = location.state?.returnMode === 'live' ? 'live' : 'results';
-  const returnPath = returnMode === 'live' ? '/' : '/matches';
+  const returnPath =
+    location.state?.returnPath != null && String(location.state.returnPath).trim() !== ''
+      ? String(location.state.returnPath)
+      : returnMode === 'live'
+        ? '/'
+        : '/matches';
   const returnState = {
     selectedDate: location.state?.selectedDate,
     selectedTeam: location.state?.selectedTeam,
@@ -270,6 +322,7 @@ const MatchStatsPage = () => {
   const statusLabel = STATUS_LABELS[rawStatus] || rawStatus;
 
   const livescoreMatchId = match.livescoreMatchId ?? match.fixtureId ?? null;
+  const isAdminLocalMatch = isLocalMatchId(livescoreMatchId);
   const [apiStats, setApiStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState('');
@@ -279,7 +332,7 @@ const MatchStatsPage = () => {
     async ({ force = false } = {}) => {
       if (!livescoreMatchId) return;
       if (document.hidden) return;
-      if (force) {
+      if (force && !isAdminLocalMatch) {
         dropApiCacheKey(`rpl.matchStats.${livescoreMatchId}`);
       }
       const seq = (loadStatsSeq.current += 1);
@@ -298,7 +351,7 @@ const MatchStatsPage = () => {
         }
       }
     },
-    [livescoreMatchId],
+    [livescoreMatchId, isAdminLocalMatch],
   );
 
   useEffect(() => {
@@ -336,14 +389,27 @@ const MatchStatsPage = () => {
   }, [livescoreMatchId, loadStats]);
 
   const stats = useMemo(() => {
-    if (apiStats && apiStats.length > 0) {
-      return buildDisplayStatsFromApi(apiStats);
-    }
-    return buildFakeStats(homeTeam, awayTeam, kickoffRaw || kickoffFallback);
-  }, [apiStats, homeTeam, awayTeam, kickoffFallback, kickoffRaw]);
+    const base =
+      apiStats && apiStats.length > 0
+        ? buildDisplayStatsFromApi(apiStats)
+        : buildFakeStats(homeTeam, awayTeam, kickoffRaw || kickoffFallback);
+    return normalizeShotsAgainstGoals(base, homeScore, awayScore);
+  }, [apiStats, homeTeam, awayTeam, kickoffFallback, kickoffRaw, homeScore, awayScore]);
 
   const apiReturnedEmpty = Boolean(
-    !statsLoading && livescoreMatchId && Array.isArray(apiStats) && apiStats.length === 0 && !statsError,
+    !statsLoading
+      && livescoreMatchId
+      && !isAdminLocalMatch
+      && Array.isArray(apiStats)
+      && apiStats.length === 0
+      && !statsError,
+  );
+  const adminLocalStatsMissing = Boolean(
+    !statsLoading
+      && isAdminLocalMatch
+      && Array.isArray(apiStats)
+      && apiStats.length === 0
+      && !statsError,
   );
   const showStatsSkeleton = Boolean(statsLoading && apiStats === null && livescoreMatchId);
 
@@ -452,6 +518,14 @@ const MatchStatsPage = () => {
               Ориентировочная статистика (нет id матча для API).
             </p>
           ) : null}
+          {isAdminLocalMatch && Array.isArray(apiStats) && apiStats.length > 0 ? (
+            <p className="body-lg match-stats-hint">Локальные данные администратора.</p>
+          ) : null}
+          {adminLocalStatsMissing ? (
+            <p className="body-lg match-stats-hint">
+              Статистика для этого матча не задана — ниже ориентировочные значения.
+            </p>
+          ) : null}
           {apiReturnedEmpty ? (
             <p className="body-lg match-stats-hint">
               Детальная статистика с сервера пуста — ниже ориентировочные значения.
@@ -459,7 +533,7 @@ const MatchStatsPage = () => {
           ) : null}
 
           {showStatsSkeleton ? (
-            <MatchStatsListSkeleton />
+            <MatchStatsListSkeleton rows={7} />
           ) : (
           <div className="match-stats-list">
             {stats.map((row) => {

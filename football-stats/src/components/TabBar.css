@@ -11,6 +11,17 @@
   z-index: 1000;
 }
 
+/* Пятый таб «Данные» только у админов — чуть плотнее разметка */
+.tab-bar--with-admin {
+  gap: 4px;
+  padding: 7px 6px;
+  width: min(96%, 580px);
+}
+
+.tab-bar--with-admin .tab-item {
+  letter-spacing: 0.02em;
+}
+
 /* Без красного ambient из .floating-surface — нейтральная тень */
 .tab-bar.floating-surface {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);

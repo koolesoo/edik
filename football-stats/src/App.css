@@ -227,6 +227,28 @@
   padding: 0.35rem 0 0.85rem;
 }
 
+.account-section .auth-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.account-section .auth-stack .auth-form {
+  width: 100%;
+  max-width: 420px;
+}
+
+.account-section .profile-stack {
+  margin-inline: auto;
+}
+
+.account-section > .auth-feedback {
+  text-align: center;
+  max-width: min(420px, 100%);
+  margin-inline: auto;
+}
+
 .floating-surface {
   background: var(--surface-bright);
   backdrop-filter: blur(24px);
@@ -1037,6 +1059,9 @@ button.meta-pill--sync-busy:disabled {
 }
 
 .match-stats-list--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
   margin-top: 0.35rem;
 }
 
@@ -1051,69 +1076,137 @@ button.meta-pill--sync-busy:disabled {
   gap: 0.5rem;
 }
 
-.match-stats-skel-pill {
-  width: 40px;
-  height: 18px;
+.match-stats-stat-block--skeleton .match-stats-skel-pill {
+  width: min(3.25rem, 38%);
+  height: 1.05rem;
   margin: 0;
 }
 
-.match-stats-skel-label {
-  flex: 1;
-  max-width: 200px;
+.match-stats-stat-block--skeleton .match-stats-stat-head .match-stats-skel-pill:first-of-type {
+  justify-self: start;
+}
+
+.match-stats-stat-block--skeleton .match-stats-stat-head .match-stats-skel-pill:last-of-type {
+  justify-self: end;
+}
+
+.match-stats-stat-block--skeleton .match-stats-skel-label {
+  width: 78%;
+  max-width: 12.5rem;
+  height: 10px;
   margin: 0 auto;
 }
 
 .match-stats-track--skeleton {
+  position: relative;
+  flex: 1;
   height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-full);
+  background: rgba(242, 242, 242, 0.08);
   overflow: hidden;
 }
 
 .match-stats-skel-bar-fill {
+  position: absolute;
+  top: 0;
   height: 100%;
-  width: 62%;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(242, 242, 242, 0.2);
 }
 
-.match-stats-skel-bar-fill--short {
-  width: 48%;
-  margin-left: auto;
+.match-stats-skel-bar-fill--home {
+  right: 0;
+  width: 58%;
+}
+
+.match-stats-skel-bar-fill--away {
+  left: 0;
+  width: 46%;
 }
 
 .profile-overview-skeleton {
-  display: grid;
-  gap: 1rem;
-}
-
-.profile-overview-skeleton-head {
-  min-height: 72px;
-  border-radius: 0.85rem;
-  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
 }
 
 .profile-overview-skeleton-pill {
-  min-height: 4.5rem;
+  min-height: 4.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
   justify-content: center;
   align-items: flex-start;
   padding: 0.65rem 0.75rem;
+  overflow: hidden;
 }
 
 .profile-overview-skeleton-pill .skeleton-line {
   margin: 0;
 }
 
-.profile-overview-skel-title {
-  width: 42%;
-  margin-top: 0.25rem;
+.profile-overview-skel-pill-label {
+  width: min(55%, 9rem);
 }
 
-.profile-overview-skel-fixtures {
-  margin-top: 0.25rem;
+.profile-overview-skel-pill-value {
+  width: min(78%, 11rem);
+}
+
+.profile-overview-skel-fixtures-block {
+  margin-top: 1rem;
+}
+
+.profile-fixtures-pair-head--skeleton {
+  margin-bottom: 0.15rem;
+}
+
+.profile-overview-skel-pair-title {
+  width: 100%;
+  height: 14px;
+  margin: 0;
+}
+
+.profile-overview-skel-fixture-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fixture-match-card--profile.profile-fixture-skeleton-card {
+  pointer-events: none;
+  cursor: default;
+  min-height: clamp(6.85rem, 32vw, 8.35rem);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+.profile-fixture-skeleton-body {
+  width: 100%;
+}
+
+.profile-fixture-skel-crest {
+  width: clamp(2.65rem, 11vw, 3.25rem) !important;
+  height: clamp(2.65rem, 11vw, 3.25rem) !important;
+  flex-shrink: 0;
+}
+
+.profile-fixture-skel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-fixture-skel-line--name {
+  width: 88%;
+  max-width: 200px;
+}
+
+.profile-fixture-skel-line--meta {
+  width: 42%;
+  max-width: 6.75rem;
 }
 
 .sheet-backdrop {
@@ -1193,6 +1286,10 @@ button.meta-pill--sync-busy:disabled {
 .segmented-btn--active {
   color: var(--on-primary-container);
   background: linear-gradient(135deg, var(--primary), var(--primary-container));
+}
+
+a.segmented-btn {
+  text-decoration: none;
 }
 
 .auth-form {
@@ -1438,6 +1535,15 @@ button.meta-pill--sync-busy:disabled {
   gap: 0.85rem;
   justify-items: start;
   align-content: start;
+}
+
+.profile-empty-state--guest {
+  justify-items: center;
+  text-align: center;
+}
+
+.profile-empty-state--guest .body-lg {
+  text-align: center;
 }
 
 .profile-empty-state .body-lg {
@@ -2585,10 +2691,54 @@ button.meta-pill--sync-busy:disabled {
 }
 
 .profile-after-hero {
-  padding: 0.75rem 0 0;
+  padding: 0.75rem 1rem 0;
 }
 
-/* Шапка-шторка РПЛ: лого сверху, заголовок под лого, чип справа от лого */
+.profile-admin-section {
+  margin: 0.65rem 1rem 0;
+  padding: 1rem 1.05rem;
+  background: var(--surface-container-high);
+  border: 1px solid rgba(165, 190, 230, 0.18);
+}
+
+.profile-admin-section-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profile-admin-section-copy {
+  min-width: 0;
+}
+
+.profile-admin-section-desc {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.profile-admin-section-cta {
+  flex-shrink: 0;
+  align-self: flex-start;
+  text-decoration: none;
+  text-align: center;
+}
+
+@media (min-width: 520px) {
+  .profile-admin-section-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .profile-admin-section-cta {
+    align-self: center;
+  }
+}
+
+/* Шторка: заголовок и чип в одну строку */
 .page-hero-card .tables-hero-panel.panel-head {
   flex-direction: column;
   align-items: stretch;
@@ -2598,22 +2748,16 @@ button.meta-pill--sync-busy:disabled {
 .tables-hero-head-left {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
-  align-items: start;
+  grid-template-rows: auto;
+  align-items: center;
   column-gap: 0.65rem;
-  row-gap: 0.28rem;
   min-width: 0;
   width: 100%;
 }
 
-.tables-hero-head-left > .tables-hero-rpl-brand {
-  grid-column: 1;
-  grid-row: 1;
-}
-
 .tables-hero-head-left > .tables-hero-page-title {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 1;
 }
 
 .tables-hero-head-left > .tables-hero-chip-slot {
@@ -2634,76 +2778,6 @@ button.meta-pill--sync-busy:disabled {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-}
-
-/* Брендинг premierliga.ru: медведь | МИР | двухстрочная подпись РПЛ — одна полоса */
-.tables-hero-rpl-brand {
-  display: inline-flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0.2rem 0.28rem;
-  text-decoration: none;
-  color: inherit;
-  min-width: 0;
-  border-radius: var(--radius-md);
-}
-
-.tables-hero-rpl-brand:focus-visible {
-  outline: 2px solid var(--accent-info);
-  outline-offset: 3px;
-}
-
-.tables-hero-rpl-promo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.18rem;
-}
-
-.tables-hero-rpl-promo__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-}
-
-.tables-hero-rpl-promo__mark--bear img {
-  height: clamp(0.95rem, 3.6vw, 1.22rem);
-}
-
-.tables-hero-rpl-promo__mark--mir img {
-  height: clamp(0.78rem, 2.9vw, 1.05rem);
-}
-
-.tables-hero-rpl-promo__mark img {
-  display: block;
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-}
-
-.tables-hero-rpl-divider {
-  width: 1px;
-  align-self: stretch;
-  min-height: 0.92rem;
-  background: rgba(242, 242, 242, 0.35);
-  flex-shrink: 0;
-}
-
-.tables-hero-rpl-wordmark {
-  display: flex;
-  align-items: center;
-  line-height: 0;
-  flex-shrink: 1;
-  min-width: 0;
-}
-
-.tables-hero-rpl-wordmark img {
-  display: block;
-  height: clamp(0.9rem, 3.25vw, 1.22rem);
-  width: auto;
-  max-width: min(80px, 30vw);
-  object-fit: contain;
-  object-position: left center;
 }
 
 .page-hero-card .panel-head {
@@ -2743,6 +2817,101 @@ button.meta-pill--sync-busy:disabled {
   .page.page--hero-bleed > .section-surface.page-lists-shell {
     width: min(100% - 2rem, 600px);
     max-width: 600px;
+  }
+}
+
+/* Админ-хаб под профилем: внешний motion.section — не .page-lists-shell, без этого блок «уезжает» по ширине hero-bleed */
+.page.page--hero-bleed > .admin-page {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-top: 0.75rem;
+}
+
+.page.page--hero-bleed > .admin-page > .section-surface.account-section {
+  width: min(100% - 2rem, 560px);
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+@media (min-width: 520px) {
+  .page.page--hero-bleed > .admin-page > .section-surface.account-section {
+    width: min(100% - 2rem, 600px);
+    max-width: 600px;
+  }
+}
+
+/* Хаб «Управление данными»: ровные поля и вертикальный ритм как у контента под шторкой */
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 0 1rem 1.15rem;
+  box-sizing: border-box;
+}
+
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-dashboard-title {
+  margin: 0;
+  text-align: start;
+  align-self: stretch;
+}
+
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub > .body-lg {
+  text-align: start;
+  max-width: none;
+}
+
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-hub-actions {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-hub-actions .admin-hub-pill {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-data-info {
+  margin-top: 0;
+  padding: 0.9rem 1rem;
+  align-self: stretch;
+}
+
+.page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-data-info .admin-muted {
+  margin-top: 0;
+}
+
+@media (min-width: 440px) {
+  .page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-hub-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-hub-actions .admin-hub-pill {
+    flex: 1 1 calc(50% - 0.25rem);
+    width: auto;
+    min-width: 140px;
+  }
+}
+
+@media (min-width: 520px) {
+  .page.page--hero-bleed > .admin-page > .account-section--admin-hub .admin-hub-actions .admin-hub-pill {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 
@@ -3028,4 +3197,270 @@ button.meta-pill--sync-busy:disabled {
   .match-stats-shell {
     max-width: 600px;
   }
+}
+
+.auth-role-toggle {
+  margin-top: 0.35rem;
+}
+
+/* Выбор типа аккаунта: спокойный синий, без красного градиента основных табов */
+.auth-role-toggle .segmented-btn--active {
+  color: rgba(236, 242, 252, 0.96);
+  background: linear-gradient(155deg, #4a6b94 0%, #355070 48%, #2f4868 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.admin-entry-link {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  margin-bottom: 0.25rem;
+}
+
+.admin-dashboard-title {
+  margin: 0 0 0.45rem;
+}
+
+.admin-page .admin-muted {
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+.admin-page-blocks {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.admin-block h3 {
+  margin-bottom: 0.35rem;
+}
+
+.admin-inline-form,
+.admin-match-form {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.admin-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.admin-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.admin-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-match-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.admin-match-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.admin-match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-score-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-score-sep {
+  text-align: center;
+  font-weight: 700;
+}
+
+.admin-stats-form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.admin-stats-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-stats-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 1fr 1fr;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.admin-stats-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 1fr 1fr;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.admin-stats-col-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.admin-stats-metric {
+  font-size: 0.85rem;
+}
+
+.admin-stats-input {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.85rem;
+}
+
+.admin-delete-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-highest);
+  color: var(--text-strong);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.admin-delete-btn:hover {
+  background: rgba(200, 72, 72, 0.28);
+}
+
+.admin-delete-btn:active {
+  transform: scale(0.96);
+}
+
+.admin-delete-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-list--aligned .admin-list-item {
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.admin-list-primary {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.admin-match-actions--row-end {
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.admin-hub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+/* Три пункта хаба: один спокойный синий, без подчёркивания у ссылок */
+.admin-hub-actions a.admin-hub-pill,
+.admin-hub-actions a.admin-hub-pill:visited {
+  text-decoration: none;
+  color: rgba(236, 242, 252, 0.96);
+  background: linear-gradient(155deg, #4a6b94 0%, #355070 48%, #2f4868 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border: none;
+}
+
+.admin-hub-actions a.admin-hub-pill:hover {
+  filter: brightness(1.07);
+  color: rgba(236, 242, 252, 0.98);
+}
+
+.admin-hub-actions a.admin-hub-pill:active {
+  filter: brightness(0.96);
+}
+
+.admin-data-info {
+  margin-top: 1rem;
+  padding: 0.95rem 1.05rem;
+}
+
+.admin-data-info-text {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.admin-data-info-strong {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.admin-inline-link {
+  color: var(--accent-info);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-create-hint {
+  margin-top: 0.5rem;
+}
+
+.admin-create-form .admin-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.pill-btn--compact {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+a.pill-btn--disabled-as-link {
+  pointer-events: none;
+  opacity: 0.42;
+}
+
+.match-row--admin-fixture .fixture-match-card {
+  border: 1px solid rgba(165, 190, 230, 0.14);
+}
+
+.tables-source-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  padding: 0 0.15rem;
+}
+
+.tables-local-chip {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 600;
 }
