@@ -10,6 +10,9 @@
 | `npm run build` | Production-сборка в **`dist/`** |
 | `npm run preview` | Локальный просмотр собранного `dist` |
 | `npm run lint` | ESLint по проекту |
+| `npm run build:capacitor` | Сборка фронта для Capacitor (`--mode capacitor`) |
+| `npm run android:sync` | `build:capacitor` + копирование в `android/` |
+| `npm run cap:open` | Открыть Android-проект (Android Studio) |
 
 Перед первым запуском: **`npm ci`** (или `npm install`) в этом каталоге.
 

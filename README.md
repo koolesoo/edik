@@ -11,6 +11,8 @@
 | `livescore_api.py` | Клиент LiveScore, маршруты вида `/api/livescore/rpl/*` |
 | `requirements.txt` | Зависимости Python для прокси |
 | `scripts/curl_livescore_rpl.sh` | Пример curl к API и к локальному Flask |
+| `scripts/dev-lan.sh` | Одновременный запуск Flask и Vite для отладки по LAN |
+| `docs/` | Android setup, правила по лимитам API |
 | `.github/workflows/deploy-pages.yml` | **GitHub Actions**: сборка фронта и деплой на **GitHub Pages** |
 
 Корневой `.env` или `football-stats/.env` (и локальные `*.local.env`, не в git): ключи **`LIVESCORE_API_KEY`**, **`LIVESCORE_API_SECRET`**.
@@ -83,4 +85,5 @@ Workflow **`.github/workflows/deploy-pages.yml`**:
 ## Полезные ссылки внутри проекта
 
 - Подробности по фронту и скриптам: [`football-stats/README.md`](football-stats/README.md)
-- Правило экономии запросов к API: [`.cursor/rules/minimize-api-requests.mdc`](.cursor/rules/minimize-api-requests.mdc)
+- Сборка Android (Capacitor): [`docs/ANDROID_SETUP.md`](docs/ANDROID_SETUP.md)
+- Экономия запросов к внешнему API: [`docs/minimize-api-requests.md`](docs/minimize-api-requests.md)
