@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="780" viewBox="0 0 900 780">
+  <defs>
+    <marker id="d" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2c5282"/>
+    </marker>
+    <style><![CDATA[
+      .ttl { font-family: system-ui, Arial, sans-serif; font-size: 13px; font-weight: 700; fill: #1a202c; text-anchor: middle; }
+      .layer { fill: #f7fafc; stroke: #2c5282; stroke-width: 2; rx: 6; }
+      .lt { font-family: system-ui, Arial, sans-serif; font-size: 11px; font-weight: 700; fill: #1a365d; }
+      .box { fill: #edf2f7; stroke: #3182ce; stroke-width: 1.4; rx: 5; }
+      .tx { font-family: system-ui, Arial, sans-serif; font-size: 9px; fill: #1a202c; text-anchor: middle; }
+      .sm { font-family: system-ui, Arial, sans-serif; font-size: 8px; fill: #4a5568; text-anchor: middle; }
+      .env { fill: #e6fffa; stroke: #319795; stroke-width: 1.8; rx: 8; }
+      .f { stroke: #4a5568; stroke-width: 1; fill: none; marker-end: url(#d); stroke-dasharray: 4 3; }
+    ]]></style>
+  </defs>
+
+  <text x="450" y="24" class="ttl">Client SPA architecture (football-stats)</text>
+
+  <rect x="28" y="44" width="844" height="118" class="layer"/>
+  <text x="44" y="66" class="lt">Presentation</text>
+  <rect x="48" y="76" width="160" height="72" class="box"/>
+  <text x="128" y="96" class="tx">Router</text>
+  <text x="128" y="112" class="sm">HashRouter, Routes</text>
+  <rect x="224" y="76" width="200" height="72" class="box"/>
+  <text x="324" y="96" class="tx">Pages</text>
+  <text x="324" y="112" class="sm">LiveScores, Tables, Profile,</text>
+  <text x="324" y="124" class="sm">MatchStats, Account, Admin*</text>
+  <rect x="440" y="76" width="200" height="72" class="box"/>
+  <text x="540" y="96" class="tx">Shared UI</text>
+  <text x="540" y="112" class="sm">TabBar, skeletons,</text>
+  <text x="540" y="124" class="sm">RequireAdmin, forms</text>
+  <rect x="656" y="76" width="200" height="72" class="box"/>
+  <text x="756" y="96" class="tx">App shell</text>
+  <text x="756" y="114" class="sm">offline banner</text>
+
+  <rect x="28" y="178" width="844" height="100" class="layer"/>
+  <text x="44" y="200" class="lt">State / context</text>
+  <rect x="48" y="210" width="380" height="58" class="box"/>
+  <text x="238" y="236" class="tx">CrestContext — crestByTeam map</text>
+  <rect x="448" y="210" width="408" height="58" class="box"/>
+  <text x="652" y="236" class="tx">AuthContext — user, favoriteTeam, admin role</text>
+
+  <rect x="28" y="292" width="844" height="110" class="layer"/>
+  <text x="44" y="314" class="lt">Data access</text>
+  <rect x="48" y="324" width="400" height="68" class="box"/>
+  <text x="248" y="348" class="tx">services/api.js</text>
+  <text x="248" y="366" class="sm">axios baseURL /api, TTL cache, in-flight dedupe</text>
+  <rect x="468" y="324" width="388" height="68" class="box"/>
+  <text x="662" y="348" class="tx">services/adminCatalog.js</text>
+  <text x="662" y="366" class="sm">local tournaments / matches / stats</text>
+
+  <rect x="28" y="416" width="844" height="128" class="layer"/>
+  <text x="44" y="438" class="lt">Supporting</text>
+  <rect x="48" y="448" width="260" height="84" class="box"/>
+  <text x="178" y="472" class="tx">hooks</text>
+  <text x="178" y="488" class="sm">useEffectWhenVisible</text>
+  <rect x="324" y="448" width="260" height="84" class="box"/>
+  <text x="454" y="472" class="tx">utils</text>
+  <text x="454" y="488" class="sm">dateTimeMsk, teamNames,</text>
+  <text x="454" y="500" class="sm">localCrests</text>
+  <rect x="600" y="448" width="256" height="84" class="box"/>
+  <text x="728" y="472" class="tx">assets + styles</text>
+  <text x="728" y="488" class="sm">App.css, SVG icons</text>
+
+  <rect x="180" y="568" width="540" height="88" class="env"/>
+  <text x="450" y="596" class="tx">Browser</text>
+  <text x="450" y="614" class="sm">localStorage (API cache, admin catalog, auth); HTTP to Flask /api</text>
+
+  <path d="M324,118 L238,178" class="f"/>
+  <path d="M540,148 L652,178" class="f"/>
+  <path d="M248,278 L248,292" class="f"/>
+  <path d="M248,402 L248,416" class="f"/>
+  <path d="M248,544 L450,568" class="f"/>
+</svg>

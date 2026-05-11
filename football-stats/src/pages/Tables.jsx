@@ -126,7 +126,11 @@ const Tables = () => {
 
   useEffect(() => {
     setAdminTournaments(listTournaments());
-  }, []);
+  }, [currentUser?.username, currentUser?.role]);
+
+  useEffect(() => {
+    setTableSource('rpl');
+  }, [currentUser?.username, currentUser?.role]);
 
   const tableRows = useMemo(() => normalizeStandings(standingsRows), [standingsRows]);
 
@@ -184,7 +188,7 @@ const Tables = () => {
   useEffectWhenVisible(() => {
     setAdminTournaments(listTournaments());
     void handleRefresh({ silent: false });
-  }, [handleRefresh]);
+  }, [currentUser?.username, currentUser?.role, handleRefresh]);
 
   const renderTeamIdentity = (row) => {
     const teamName = String(row?.team || '-');
@@ -248,7 +252,7 @@ const Tables = () => {
               <span className="body-lg tables-local-chip">Локальный турнир</span>
             )}
           </RplHeroPanel>
-          {adminTournaments.length > 0 ? (
+          {currentUser?.role === 'admin' && adminTournaments.length > 0 ? (
             <div className="tables-source-toggle" role="tablist" aria-label="Источник таблицы">
               <button
                 type="button"

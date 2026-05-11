@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Основные требования к технологическому стеку</title>
+  <style>
+    body { font-family: "Times New Roman", Times, serif; font-size: 11pt; margin: 24px; }
+    caption { font-weight: bold; margin-bottom: 8px; caption-side: top; text-align: left; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #000; padding: 6px 8px; vertical-align: top; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <table>
+    <caption>Таблица — основные требования к технологическому стеку</caption>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Требование к стеку</th>
+        <th>Технология / средство (проект)</th>
+        <th>Назначение и примечание</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Клиентское приложение — одностраничное (SPA), модульная сборка</td>
+        <td>React 19, Vite 6, Framer Motion 12.x</td>
+        <td>Компонентный UI; анимации переходов; сборка production-бандла</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Маршрутизация на клиенте без перезагрузки страницы</td>
+        <td>react-router-dom 7.x (HashRouter)</td>
+        <td>Разделы: матчи, таблица, профиль, статистика матча, аккаунт, админ</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Асинхронные запросы к серверу и единая точка доступа к API</td>
+        <td>axios 1.x</td>
+        <td>Базовый URL <code>/api</code>, централизованная обработка ошибок в <code>api.js</code></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Ограничение числа обращений к внешнему API</td>
+        <td>Собственный слой кэша (TTL, localStorage, дедуп in-flight) поверх axios</td>
+        <td>Снижение нагрузки на провайдера и устойчивость при 429/offline</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Сервер приложений — REST-прокси к внешнему API, скрытие ключей от браузера</td>
+        <td>Python 3, Flask ≥ 2.0, flask-cors</td>
+        <td>Эндпоинты <code>/api/livescore/rpl/*</code>; CORS при раздельном запуске фронта и бэка</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>Конфигурация секретов без хардкода в репозитории</td>
+        <td>python-dotenv, файлы <code>.env</code></td>
+        <td>Переменные <code>LIVESCORE_API_KEY</code> / <code>LIVESCORE_API_SECRET</code></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>Интеграция с поставщиком данных о матчах</td>
+        <td>LiveScore API (через <code>livescore_api.py</code>)</td>
+        <td>Источник live-матчей, расписания, таблицы, статистики матча</td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>Дополнительно: опциональная оболочка под мобильную платформу</td>
+        <td>Capacitor 8.x (Android)</td>
+        <td>Сборка <code>build:capacitor</code> при необходимости нативного контейнера</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>Статический анализ и качество кода фронтенда</td>
+        <td>ESLint 9.x, плагины React</td>
+        <td>Команда <code>npm run lint</code> в каталоге <code>football-stats/</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 9pt; color: #444;">Скопируйте таблицу целиком и вставьте в Word одной операцией.</p>
+</body>
+</html>

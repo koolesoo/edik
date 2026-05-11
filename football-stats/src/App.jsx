@@ -11,7 +11,6 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCreateTournament from './pages/admin/AdminCreateTournament';
 import AdminCreateTeam from './pages/admin/AdminCreateTeam';
 import AdminCreateMatch from './pages/admin/AdminCreateMatch';
-import AdminMatchStatsPage from './pages/admin/AdminMatchStatsPage';
 import TabBar from './components/TabBar';
 import Tables from './pages/Tables';
 import { CrestProvider } from './context/CrestContext';
@@ -57,7 +56,7 @@ const App = () => {
                 <Route path="create/tournament" element={<AdminCreateTournament />} />
                 <Route path="create/team" element={<AdminCreateTeam />} />
                 <Route path="create/match" element={<AdminCreateMatch />} />
-                <Route path="stats/:matchId" element={<AdminMatchStatsPage />} />
+                <Route path="stats/*" element={<Navigate to="/profile/data" replace />} />
               </Route>
             </Route>
             <Route path="/admin/*" element={<LegacyAdminRedirect />} />

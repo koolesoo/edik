@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="740" viewBox="0 0 1020 740">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#1a365d"/>
+    </marker>
+    <style><![CDATA[
+      .pool { fill: #f8fafc; stroke: #2c5282; stroke-width: 2; rx: 3; }
+      .lane-div { stroke: #cbd5e0; stroke-width: 1; }
+      .lane-lbl { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 12.5px; fill: #1a202c; font-weight: 600; }
+      .task { fill: #fff; stroke: #2b6cb0; stroke-width: 1.5; rx: 6; }
+      .tx { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 10.5px; fill: #1a202c; text-anchor: middle; }
+      .gw { fill: #fffbeb; stroke: #b7791f; stroke-width: 1.5; }
+      .se { fill: #e6fffa; stroke: #2c7a7b; stroke-width: 2; }
+      .ee { fill: #fff5f5; stroke: #c53030; stroke-width: 2; }
+      .f { stroke: #2d3748; stroke-width: 1.25; fill: none; marker-end: url(#arr); }
+      .ttl { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 14px; fill: #1a202c; font-weight: 700; text-anchor: middle; }
+      .lbl { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 9.5px; fill: #4a5568; }
+    ]]></style>
+  </defs>
+
+  <text x="510" y="26" class="ttl">??????? 2.1 � ????? BPMN-????? ???????? ????????? ?????????? ??????????</text>
+
+  <rect x="28" y="42" width="964" height="678" class="pool"/>
+  <text x="42" y="64" class="lane-lbl">???????: ????????? ? ??????????? ??????????</text>
+
+  <line x1="28" y1="148" x2="992" y2="148" class="lane-div"/>
+  <line x1="28" y1="432" x2="992" y2="432" class="lane-div"/>
+  <line x1="28" y1="526" x2="992" y2="526" class="lane-div"/>
+
+  <text x="40" y="104" class="lane-lbl">????????????</text>
+  <text x="40" y="188" class="lane-lbl">?????? (SPA, api.js)</text>
+  <text x="40" y="472" class="lane-lbl">?????? (Flask-??????)</text>
+  <text x="40" y="564" class="lane-lbl">LiveScore API</text>
+
+  <circle cx="110" cy="110" r="12" class="se"/>
+
+  <rect x="156" y="86" width="160" height="48" class="task"/>
+  <text x="236" y="108" class="tx">?????? ??????????</text>
+  <text x="236" y="122" class="tx">(???? / ?????? / ????)</text>
+
+  <rect x="360" y="176" width="168" height="52" class="task"/>
+  <text x="444" y="198" class="tx">???? ????, ????????</text>
+  <text x="444" y="214" class="tx">TTL ? localStorage</text>
+
+  <polygon points="572,188 598,202 572,216 546,202" class="gw"/>
+
+  <rect x="628" y="176" width="124" height="52" class="task"/>
+  <text x="690" y="208" class="tx">????? ?? ????</text>
+
+  <polygon points="572,268 598,282 572,296 546,282" class="gw"/>
+
+  <rect x="320" y="314" width="120" height="48" class="task"/>
+  <text x="380" y="342" class="tx">?????: ?????</text>
+
+  <rect x="468" y="314" width="120" height="48" class="task"/>
+  <text x="528" y="342" class="tx">HTTP GET /api</text>
+
+  <polygon points="634,322 662,336 634,350 606,336" class="gw"/>
+
+  <rect x="696" y="314" width="130" height="48" class="task"/>
+  <text x="761" y="342" class="tx">?????? ????</text>
+
+  <polygon points="572,366 598,380 572,394 546,380" class="gw"/>
+
+  <rect x="628" y="406" width="150" height="48" class="task"/>
+  <text x="703" y="432" class="tx">?????????? ???</text>
+
+  <rect x="448" y="244" width="150" height="44" class="task"/>
+  <text x="523" y="270" class="tx">?????? ????????????</text>
+
+  <rect x="788" y="176" width="140" height="52" class="task"/>
+  <text x="858" y="210" class="tx">??????????? ? UI</text>
+
+  <rect x="438" y="456" width="180" height="48" class="task"/>
+  <text x="528" y="484" class="tx">????????????? ???????</text>
+
+  <rect x="438" y="552" width="180" height="48" class="task"/>
+  <text x="528" y="580" class="tx">????? ??????????</text>
+
+  <circle cx="930" cy="692" r="14" class="ee"/>
+  <circle cx="930" cy="692" r="8" fill="#fff" stroke="#c53030" stroke-width="2"/>
+
+  <!-- flows -->
+  <path d="M122,110 L156,110" class="f"/>
+  <path d="M316,110 L360,202" class="f"/>
+  <path d="M528,202 L546,202" class="f"/>
+  <path d="M598,202 L628,202" class="f"/>
+  <path d="M752,202 L788,202" class="f"/>
+  <path d="M858,228 L858,692 L916,692" class="f"/>
+
+  <path d="M572,216 L572,268" class="f"/>
+  <path d="M546,282 L320,338" class="f"/>
+  <path d="M598,282 L468,338" class="f"/>
+
+  <path d="M528,362 L606,336" class="f"/>
+  <path d="M380,362 L606,336" class="f"/>
+
+  <path d="M588,336 L634,336" class="f"/>
+  <path d="M662,336 L696,338" class="f"/>
+
+  <path d="M528,362 L528,456" class="f"/>
+  <path d="M634,350 L634,372 L572,372" class="f"/>
+  <path d="M528,504 L528,552" class="f"/>
+
+  <path d="M528,600 L528,336 L634,336" class="f"/>
+
+  <path d="M761,338 L820,338 L820,202 L788,202" class="f"/>
+
+  <path d="M572,394 L628,430" class="f"/>
+  <path d="M703,430 L858,228" class="f"/>
+
+  <path d="M546,380 L448,266" class="f"/>
+  <path d="M523,266 L788,202" class="f"/>
+
+  <!-- gateway labels -->
+  <text x="604" y="180" class="lbl">???</text>
+  <text x="606" y="208" class="lbl">??</text>
+  <text x="538" y="300" class="lbl">??</text>
+  <text x="548" y="292" class="lbl">???</text>
+  <text x="668" y="318" class="lbl">??</text>
+  <text x="582" y="352" class="lbl">???</text>
+  <text x="654" y="400" class="lbl">??</text>
+  <text x="534" y="388" class="lbl">???</text>
+</svg>

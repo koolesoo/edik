@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
 import { addTeam, listTournaments } from '../../services/adminCatalog';
 
 const MotionSection = motion.section;
@@ -8,8 +9,9 @@ const MotionSection = motion.section;
 const AdminCreateTeam = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { authReady } = useAuth();
   const initialTid = params.get('tournamentId') || '';
-  const tournaments = useMemo(() => listTournaments(), []);
+  const tournaments = useMemo(() => (authReady ? listTournaments() : []), [authReady]);
   const [tournamentId, setTournamentId] = useState(initialTid);
   const [name, setName] = useState('');
   const [crestUrl, setCrestUrl] = useState('');

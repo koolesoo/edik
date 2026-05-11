@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="800" viewBox="0 0 1100 800">
+  <defs>
+    <marker id="dep" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L7,4 z" fill="#2d3748"/>
+    </marker>
+    <marker id="depOpen" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,5 L0,10" fill="none" stroke="#4a5568" stroke-width="1.2"/>
+    </marker>
+    <style><![CDATA[
+      .pkg { fill: #f7fafc; stroke: #2c5282; stroke-width: 2; stroke-dasharray: 8 4; rx: 8; }
+      .pkg-title { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 13px; fill: #1a365d; font-weight: 700; }
+      .cmp { fill: #edf2f7; stroke: #3182ce; stroke-width: 1.6; rx: 4; }
+      .cmp-ext { fill: #fffaf0; stroke: #c05621; stroke-width: 1.6; rx: 4; }
+      .stor { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 9px; fill: #4a5568; font-style: italic; }
+      .name { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 11px; fill: #1a202c; font-weight: 600; text-anchor: middle; }
+      .sub { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 9.5px; fill: #2d3748; text-anchor: middle; }
+      .ttl { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 13px; fill: #1a202c; font-weight: 700; text-anchor: middle; }
+      .leg { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 9px; fill: #718096; }
+      .solid { stroke: #2d3748; stroke-width: 1.25; fill: none; marker-end: url(#dep); }
+      .dash { stroke: #718096; stroke-width: 1.15; fill: none; stroke-dasharray: 6 4; marker-end: url(#depOpen); }
+      .store { fill: #e6fffa; stroke: #319795; stroke-width: 1.8; }
+    ]]></style>
+  </defs>
+
+  <text x="550" y="26" class="ttl">Figure 2.4 - UML component diagram (editable vector)</text>
+
+  <rect x="24" y="48" width="520" height="548" class="pkg"/>
+  <text x="44" y="72" class="pkg-title">Subsystem: SPA client (Vite, React)</text>
+
+  <rect x="48" y="86" width="210" height="48" class="cmp"/>
+  <text x="153" y="108" class="stor">component</text>
+  <text x="153" y="124" class="name">AppShell + Router</text>
+
+  <rect x="278" y="86" width="246" height="72" class="cmp"/>
+  <text x="401" y="108" class="stor">component</text>
+  <text x="401" y="124" class="name">Pages</text>
+  <text x="401" y="142" class="sub">HomePage, LiveScoresPage, Tables, Profile,</text>
+  <text x="401" y="154" class="sub">MatchStatsPage, Account, Admin*</text>
+
+  <rect x="48" y="176" width="210" height="48" class="cmp"/>
+  <text x="153" y="198" class="stor">component</text>
+  <text x="153" y="214" class="name">Shared UI</text>
+
+  <rect x="278" y="176" width="246" height="48" class="cmp"/>
+  <text x="401" y="198" class="stor">component</text>
+  <text x="401" y="214" class="name">CrestContext, AuthContext</text>
+
+  <rect x="48" y="242" width="476" height="68" class="cmp"/>
+  <text x="286" y="266" class="stor">component</text>
+  <text x="286" y="282" class="name">services/api.js</text>
+  <text x="286" y="298" class="sub">axios baseURL /api, cache TTL, in-flight dedupe</text>
+
+  <rect x="48" y="324" width="476" height="52" class="cmp"/>
+  <text x="286" y="346" class="stor">component</text>
+  <text x="286" y="362" class="name">services/adminCatalog.js</text>
+
+  <rect x="48" y="390" width="476" height="192" class="cmp"/>
+  <text x="286" y="416" class="stor">component</text>
+  <text x="286" y="434" class="name">Supporting modules</text>
+  <text x="286" y="452" class="sub">dateTimeMsk.js, teamNames.js, localCrests.js,</text>
+  <text x="286" y="466" class="sub">hooks/useEffectWhenVisible.js, components/*</text>
+
+  <rect x="568" y="48" width="368" height="258" class="pkg"/>
+  <text x="588" y="72" class="pkg-title">Subsystem: Python server</text>
+
+  <rect x="592" y="86" width="320" height="88" class="cmp"/>
+  <text x="752" y="112" class="stor">component</text>
+  <text x="752" y="130" class="name">Flask app.py</text>
+  <text x="752" y="150" class="sub">REST /api/livescore/rpl/*</text>
+
+  <rect x="592" y="190" width="320" height="100" class="cmp"/>
+  <text x="752" y="218" class="stor">component</text>
+  <text x="752" y="236" class="name">livescore_api.py</text>
+  <text x="752" y="256" class="sub">fetch_* to LiveScore (env keys)</text>
+
+  <rect x="568" y="326" width="368" height="112" class="pkg"/>
+  <text x="588" y="350" class="pkg-title">Subsystem: external</text>
+
+  <rect x="592" y="364" width="320" height="62" class="cmp-ext"/>
+  <text x="752" y="388" class="stor">component</text>
+  <text x="752" y="406" class="name">LiveScore API</text>
+
+  <ellipse cx="864" cy="612" rx="112" ry="42" class="store"/>
+  <text x="864" y="608" class="name">localStorage</text>
+  <text x="864" y="624" class="sub">API cache, admin catalog, auth/profile</text>
+
+  <path d="M286,276 L864,570" class="dash"/>
+  <path d="M286,350 L820,570" class="dash"/>
+  <path d="M401,158 L286,242" class="dash"/>
+  <path d="M278,200 L278,176" class="dash"/>
+  <path d="M752,174 L752,190" class="solid"/>
+  <path d="M524,276 L592,130" class="solid"/>
+  <path d="M752,290 L752,364" class="solid"/>
+
+  <text x="56" y="676" class="leg">Solid arrows: HTTP/JSON to Flask and onward to LiveScore. Dashed: optional React-Context usage and browser storage.</text>
+</svg>

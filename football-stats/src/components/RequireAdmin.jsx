@@ -7,9 +7,12 @@ import { useAuth } from '../context/AuthContext';
  * С `<Outlet />` для вложенных маршрутов (например `/profile/data/*`).
  */
 export const RequireAdmin = ({ children }) => {
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser, isAuthenticated, authReady } = useAuth();
   const location = useLocation();
 
+  if (!authReady) {
+    return null;
+  }
   if (!isAuthenticated) {
     return <Navigate to="/account" replace state={{ from: location.pathname }} />;
   }

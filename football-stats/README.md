@@ -1,6 +1,6 @@
 # Статистика РПЛ — фронтенд
 
-Каталог **`football-stats/`** — SPA **«Статистика РПЛ»**: React + Vite. Общая архитектура, Flask-прокси и деплой описаны в [README.md в корне репозитория](../README.md).
+Каталог **`football-stats/`** — SPA **«Статистика РПЛ»**: React + Vite. Общая архитектура и запуск описаны в [README.md в корне репозитория](../README.md). **Инструкция для проверяющих:** [../docs/for-reviewers.md](../docs/for-reviewers.md).
 
 ## Скрипты npm
 
@@ -53,6 +53,6 @@ Vite подхватывает переменные с префиксом **`VITE
 
 `vite.config.js` проксирует **`/api`** на **`http://127.0.0.1:5001`** (Flask из корня репозитория). Без запущенного `app.py` запросы к `/api` в dev вернут ошибку сети.
 
-## Сборка для GitHub Pages
+## Сборка production
 
-`npm run build` выводит статику в **`dist/`**. Репозиторий использует workflow **Deploy GitHub Pages** (см. корневой README): артефакт деплоя — содержимое **`football-stats/dist`**.
+`npm run build` собирает статику в **`dist/`**. Локально проверить результат: `npm run preview`. Каталог **`dist/`** в git не коммитится.

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="720" viewBox="0 0 920 720">
+  <defs>
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+      <path d="M0,0 L0,5 L6,2.5 z" fill="#000"/>
+    </marker>
+    <marker id="arrOpen" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6" fill="none" stroke="#000" stroke-width="1"/>
+    </marker>
+    <style><![CDATA[
+      .title { font-family: "Times New Roman", Times, serif; font-size: 13pt; font-weight: 700; fill: #000; text-anchor: middle; }
+      .subttl { font-family: "Times New Roman", Times, serif; font-size: 9pt; fill: #000; text-anchor: middle; font-style: italic; }
+      .lbl { font-family: "Times New Roman", Times, serif; font-size: 10pt; font-weight: 700; fill: #000; }
+      .tx { font-family: "Times New Roman", Times, serif; font-size: 9.5pt; fill: #000; text-anchor: middle; }
+      .sm { font-family: "Times New Roman", Times, serif; font-size: 8.5pt; fill: #000; text-anchor: middle; }
+      .box { fill: #fff; stroke: #000; stroke-width: 1.2; }
+      .nest { fill: #fafafa; stroke: #000; stroke-width: 1; }
+      .dash { stroke: #000; stroke-width: 1; fill: none; stroke-dasharray: 5 4; marker-end: url(#arrOpen); }
+      .solid { stroke: #000; stroke-width: 1; fill: none; marker-end: url(#arr); }
+      .note { font-family: "Times New Roman", Times, serif; font-size: 8.5pt; fill: #000; text-anchor: start; }
+    ]]></style>
+  </defs>
+
+  <text x="460" y="32" class="title">Рисунок — архитектура frontend-приложения на React</text>
+  <text x="460" y="52" class="subttl">уровни абстракции и композиции (не хронология выполнения)</text>
+
+  <!-- Bootstrap: real order -->
+  <text x="48" y="88" class="lbl">Запуск приложения</text>
+  <rect x="48" y="96" width="280" height="36" class="box"/>
+  <text x="188" y="118" class="tx">main.jsx → createRoot</text>
+  <path d="M188,132 L188,148" class="solid"/>
+  <rect x="48" y="148" width="280" height="36" class="box"/>
+  <text x="188" y="170" class="tx">&lt;App /&gt;</text>
+
+  <!-- Nested providers + router - composition -->
+  <text x="48" y="218" class="lbl">Вложенность провайдеров и маршрутизации</text>
+  <rect x="48" y="228" width="420" height="280" class="nest"/>
+  <text x="70" y="248" class="sm">CrestProvider</text>
+  <rect x="64" y="256" width="388" height="240" class="box"/>
+  <text x="258" y="278" class="sm">HashRouter</text>
+  <rect x="72" y="286" width="372" height="200" class="box"/>
+  <text x="258" y="308" class="sm">Routes / Route → страничные компоненты</text>
+  <rect x="88" y="318" width="100" height="52" class="box"/>
+  <text x="138" y="348" class="tx">Live</text>
+  <rect x="198" y="318" width="100" height="52" class="box"/>
+  <text x="248" y="348" class="tx">Tables</text>
+  <rect x="308" y="318" width="120" height="52" class="box"/>
+  <text x="368" y="348" class="tx">Profile …</text>
+  <rect x="120" y="388" width="320" height="44" class="box"/>
+  <text x="280" y="414" class="tx">TabBar, общие виджеты, RequireAdmin</text>
+  <text x="258" y="468" class="sm">ProfileLayout вложенные маршруты /admin*</text>
+
+  <!-- Auth context - sibling concern -->
+  <rect x="500" y="228" width="372" height="88" class="nest"/>
+  <text x="686" y="248" class="lbl">Контекст Auth</text>
+  <rect x="520" y="256" width="332" height="52" class="box"/>
+  <text x="686" y="286" class="tx">AuthProvider — useAuth() в страницах и guards</text>
+
+  <!-- Data layer -->
+  <rect x="500" y="332" width="372" height="100" class="nest"/>
+  <text x="686" y="354" class="lbl">Доступ к данным</text>
+  <rect x="520" y="362" width="332" height="62" class="box"/>
+  <text x="686" y="386" class="tx">services/api.js</text>
+  <text x="686" y="402" class="sm">axios, кэш TTL, дедуп in-flight</text>
+  <rect x="520" y="432" width="160" height="40" class="box"/>
+  <text x="600" y="456" class="tx">useEffect …</text>
+  <rect x="692" y="432" width="160" height="40" class="box"/>
+  <text x="772" y="456" class="tx">useEffectWhenVisible</text>
+
+  <!-- Dashed from pages area to api -->
+  <path d="M320,370 L600,370" class="dash"/>
+  <text x="440" y="362" class="sm">обращение</text>
+
+  <!-- Environment -->
+  <rect x="48" y="528" width="824" height="56" class="box"/>
+  <text x="460" y="552" class="tx">Среда: DOM, localStorage, HTTP (/api); оформление — Framer Motion</text>
+
+  <path d="M188,184 L258,228" class="solid"/>
+
+  <text x="48" y="612" class="note">Сплошные стрелки — порядок монтирования у корня (bootstrap). Внутри рамки — иерархия композиции родитель → дочерние компоненты.</text>
+  <text x="48" y="630" class="note">Пунктир — использование сервисного модуля страницами и хуками без фиксированной очереди вызовов.</text>
+  <text x="48" y="648" class="note">Контексты Crest и Auth скрещивают дерево: потребители подписаны на провайдеры, а не «идут следом» друг за другом.</text>
+</svg>

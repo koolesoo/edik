@@ -1,6 +1,92 @@
 /** Локальный каталог турниров/команд/матчей и ручная статистика (только для админ-UI). Без HTTP. */
 
-const CATALOG_KEY = 'footstat.admin.catalog.v1';
+const LEGACY_CATALOG_KEY = 'footstat.admin.catalog.v1';
+const V2_PREFIX = 'footstat.admin.catalog.v2.';
+const V3_PREFIX = 'footstat.admin.catalog.v3.';
+
+/** numeric user id с сервера — ключ каталога; новый аккаунт = другой id = отдельные турниры. */
+let catalogOwnerUserId = null;
+/** Для одноразового переноса каталога v2 (по логину) → v3 (по id). */
+let catalogOwnerUsernameNormalized = null;
+
+const normalizeOwner = (u) => String(u || '').trim().toLowerCase();
+
+/**
+ * Вызывается из AuthContext при смене пользователя.
+ * Без вошедшего администратора каталог для чтения пустой — чужие турниры не светим в UI и не мержим в ленту.
+ * @param {number|null|undefined} userId
+ * @param {string|null|undefined} username
+ * @param {boolean} isAdmin
+ */
+export const setAdminCatalogContext = (userId, username, isAdmin) => {
+  if (!isAdmin) {
+    catalogOwnerUserId = null;
+    catalogOwnerUsernameNormalized = null;
+    return;
+  }
+  const uid = userId != null ? Number(userId) : NaN;
+  catalogOwnerUserId = Number.isFinite(uid) && uid > 0 ? uid : null;
+  catalogOwnerUsernameNormalized = username ? normalizeOwner(username) : null;
+};
+
+const catalogKeyForActiveOwner = () => {
+  if (catalogOwnerUserId != null && catalogOwnerUserId > 0) {
+    return `${V3_PREFIX}${catalogOwnerUserId}`;
+  }
+  return catalogOwnerUsernameNormalized ? `${V2_PREFIX}${catalogOwnerUsernameNormalized}` : '';
+};
+
+/** Уже есть каталог любого пользователя (v2 или v3). */
+const hasAnyScopedCatalogKey = () => {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith(V2_PREFIX) || k.startsWith(V3_PREFIX)) return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+};
+
+/**
+ * Один раз переносим footstat.admin.catalog.v1 → первый пустой ключ при чистой установке.
+ * Если v2/v3 уже есть — legacy удаляем, чтобы новый аккаунт не получил чужой каталог.
+ */
+const migrateLegacyIntoKey = (targetKey) => {
+  if (typeof localStorage === 'undefined' || !targetKey) return;
+  try {
+    const legacy = localStorage.getItem(LEGACY_CATALOG_KEY);
+    if (!legacy) return;
+    if (localStorage.getItem(targetKey)) return;
+    if (hasAnyScopedCatalogKey()) {
+      localStorage.removeItem(LEGACY_CATALOG_KEY);
+      return;
+    }
+    localStorage.setItem(targetKey, legacy);
+    localStorage.removeItem(LEGACY_CATALOG_KEY);
+  } catch {
+    /* ignore */
+  }
+};
+
+/** Одноразово переносим данные со старого ключа по логину на ключ по id. */
+const migrateV2ToV3IfNeeded = (v3Key) => {
+  if (typeof localStorage === 'undefined' || !v3Key || !v3Key.startsWith(V3_PREFIX)) return;
+  if (!catalogOwnerUsernameNormalized) return;
+  try {
+    if (localStorage.getItem(v3Key)) return;
+    const v2Key = `${V2_PREFIX}${catalogOwnerUsernameNormalized}`;
+    const raw = localStorage.getItem(v2Key);
+    if (!raw) return;
+    localStorage.setItem(v3Key, raw);
+    localStorage.removeItem(v2Key);
+  } catch {
+    /* ignore */
+  }
+};
 
 export const LOCAL_MATCH_PREFIX = 'loc_';
 
@@ -20,7 +106,11 @@ const emptyCatalog = () => ({
 export const readCatalog = () => {
   try {
     if (typeof localStorage === 'undefined') return emptyCatalog();
-    const raw = localStorage.getItem(CATALOG_KEY);
+    const key = catalogKeyForActiveOwner();
+    if (!key) return emptyCatalog();
+    migrateLegacyIntoKey(key);
+    migrateV2ToV3IfNeeded(key);
+    const raw = localStorage.getItem(key);
     if (!raw) return emptyCatalog();
     const p = JSON.parse(raw);
     return {
@@ -35,42 +125,78 @@ export const readCatalog = () => {
   }
 };
 
+/** @returns {boolean} */
 const writeCatalog = (cat) => {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(CATALOG_KEY, JSON.stringify(cat));
+  if (typeof localStorage === 'undefined') return false;
+  const key = catalogKeyForActiveOwner();
+  if (!key) return false;
+  try {
+    localStorage.setItem(key, JSON.stringify(cat));
+    return true;
+  } catch {
+    return false;
+  }
 };
 
-/** Форма статистики совпадает с ключами MatchStatsPage DISPLAY_STATS. */
+/**
+ * Полный набор метрик (основные + «Профи»): дефолт и сброс — нули по обеим сторонам.
+ * Владение 0/0 на экране даёт ровные полоски (как при 50/50); при сохранении форма нормализует доли.
+ */
 export const emptyStatBundle = () => ({
-  possession: { home: 50, away: 50 },
+  possession: { home: 0, away: 0 },
   shots: { home: 0, away: 0 },
   on_target: { home: 0, away: 0 },
   corners: { home: 0, away: 0 },
   offsides: { home: 0, away: 0 },
   fouls: { home: 0, away: 0 },
+  passes: { home: 0, away: 0 },
+  pass_accuracy: { home: 0, away: 0 },
+  big_chances: { home: 0, away: 0 },
+  saves: { home: 0, away: 0 },
+  tackles: { home: 0, away: 0 },
+  interceptions: { home: 0, away: 0 },
+  clearances: { home: 0, away: 0 },
+  yellow_cards: { home: 0, away: 0 },
+  red_cards: { home: 0, away: 0 },
+  dangerous_attacks: { home: 0, away: 0 },
 });
 
 /**
  * Строки в формате, который понимает classifyStatKey / buildDisplayStatsFromApi.
+ * Для локального матча из каталога всегда отдаём полный набор (нули, пока админ не сохранил цифры).
  * @param {string} matchId
  * @returns {Array<{ type?: string, label?: string, home?: number, away?: number }>}
  */
 export const getMatchStatisticsApiRows = (matchId) => {
   const cat = readCatalog();
-  const raw = cat.matchStatsByMatchId[String(matchId)];
-  if (!raw || typeof raw !== 'object') return [];
+  const mid = String(matchId);
+  if (!cat.matches.some((m) => m.id === mid)) return [];
+
+  const raw = cat.matchStatsByMatchId[mid];
+  const merged = { ...emptyStatBundle(), ...(raw && typeof raw === 'object' ? raw : {}) };
 
   const num = (v, fallback = 0) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : fallback;
   };
 
-  const p = raw.possession || {};
-  const shots = raw.shots || {};
-  const ot = raw.on_target || {};
-  const cor = raw.corners || {};
-  const off = raw.offsides || {};
-  const fouls = raw.fouls || {};
+  const pair = (key) => merged[key] || { home: 0, away: 0 };
+  const p = pair('possession');
+  const shots = pair('shots');
+  const ot = pair('on_target');
+  const cor = pair('corners');
+  const off = pair('offsides');
+  const fouls = pair('fouls');
+  const passes = pair('passes');
+  const pa = pair('pass_accuracy');
+  const bc = pair('big_chances');
+  const saves = pair('saves');
+  const tackles = pair('tackles');
+  const interceptions = pair('interceptions');
+  const clearances = pair('clearances');
+  const yc = pair('yellow_cards');
+  const rc = pair('red_cards');
+  const da = pair('dangerous_attacks');
 
   return [
     { type: 'Ball possession', label: 'Possession', home: num(p.home, 50), away: num(p.away, 50) },
@@ -79,6 +205,16 @@ export const getMatchStatisticsApiRows = (matchId) => {
     { type: 'Corner kicks', label: 'Corners', home: num(cor.home), away: num(cor.away) },
     { type: 'Offsides', label: 'Offsides', home: num(off.home), away: num(off.away) },
     { type: 'Fouls', label: 'Fouls', home: num(fouls.home), away: num(fouls.away) },
+    { type: 'Total passes', label: 'Passes', home: num(passes.home), away: num(passes.away) },
+    { type: 'Pass accuracy', label: 'Pass accuracy %', home: num(pa.home), away: num(pa.away) },
+    { type: 'Big chances', label: 'Big chances', home: num(bc.home), away: num(bc.away) },
+    { type: 'Goalkeeper saves', label: 'Saves', home: num(saves.home), away: num(saves.away) },
+    { type: 'Tackles', label: 'Tackles', home: num(tackles.home), away: num(tackles.away) },
+    { type: 'Interceptions', label: 'Interceptions', home: num(interceptions.home), away: num(interceptions.away) },
+    { type: 'Clearances', label: 'Clearances', home: num(clearances.home), away: num(clearances.away) },
+    { type: 'Yellow cards', label: 'Yellow cards', home: num(yc.home), away: num(yc.away) },
+    { type: 'Red cards', label: 'Red cards', home: num(rc.home), away: num(rc.away) },
+    { type: 'Dangerous attacks', label: 'Dangerous attacks', home: num(da.home), away: num(da.away) },
   ];
 };
 
@@ -211,6 +347,19 @@ export const setMatchStats = (matchId, bundle) => {
   const base = emptyStatBundle();
   const next = { ...base, ...bundle };
   cat.matchStatsByMatchId[mid] = next;
+  if (!writeCatalog(cat)) {
+    throw new Error('Не удалось сохранить каталог (войдите как администратор или проверьте доступ к localStorage).');
+  }
+};
+
+/** Обновить счёт локального матча (например во время LIVE). */
+export const updateMatchScores = (matchId, homeScore, awayScore) => {
+  const mid = String(matchId);
+  const cat = readCatalog();
+  const m = cat.matches.find((x) => x.id === mid);
+  if (!m) throw new Error('Матч не найден');
+  m.homeScore = Math.max(0, Math.round(Number(homeScore) || 0));
+  m.awayScore = Math.max(0, Math.round(Number(awayScore) || 0));
   writeCatalog(cat);
 };
 

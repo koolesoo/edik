@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+  <defs>
+    <marker id="m" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#1a365d"/>
+    </marker>
+    <style><![CDATA[
+      .ttl { font-family: system-ui, Arial, sans-serif; font-size: 13px; font-weight: 700; text-anchor: middle; fill: #1a202c; }
+      .box { fill: #edf2f7; stroke: #2b6cb0; stroke-width: 1.5; rx: 8; }
+      .gw { fill: #fffbeb; stroke: #c05621; stroke-width: 1.5; }
+      .note { fill: #ebf8ff; stroke: #3182ce; stroke-width: 1.2; rx: 6; }
+      .tx { font-family: system-ui, Arial, sans-serif; font-size: 10px; fill: #1a202c; text-anchor: middle; }
+      .sm { font-family: system-ui, Arial, sans-serif; font-size: 8.5px; fill: #4a5568; text-anchor: middle; }
+      .f { stroke: #2d3748; stroke-width: 1.15; fill: none; marker-end: url(#m); }
+      .lbl { font-family: system-ui, Arial, sans-serif; font-size: 9px; fill: #718096; }
+    ]]></style>
+  </defs>
+
+  <text x="360" y="26" class="ttl">TTL cache flow (cachedRequest + localStorage)</text>
+
+  <rect x="140" y="48" width="440" height="44" class="box"/>
+  <text x="360" y="74" class="tx">cachedRequest(key, requestFn, maxAgeMs)</text>
+
+  <rect x="140" y="112" width="440" height="52" class="box"/>
+  <text x="360" y="134" class="tx">getApiCacheEntry(key)</text>
+  <text x="360" y="150" class="sm">read localStorage footstat.api.cache.v3</text>
+
+  <polygon points="312,198 360,232 312,266 264,232" class="gw"/>
+  <text x="360" y="228" class="sm">fresh?</text>
+
+  <rect x="380" y="208" width="240" height="56" class="box"/>
+  <text x="500" y="232" class="tx">return cached.payload</text>
+  <text x="500" y="248" class="sm">age &lt;= maxAgeMs</text>
+
+  <rect x="80" y="292" width="280" height="72" class="box"/>
+  <text x="220" y="318" class="tx">Stale / missing</text>
+  <text x="220" y="336" class="sm">continue (in-flight dedupe,</text>
+  <text x="220" y="350" class="sm">then HTTP requestFn)</text>
+
+  <rect x="400" y="292" width="280" height="52" class="box"/>
+  <text x="540" y="322" class="tx">On success</text>
+
+  <rect x="400" y="358" width="280" height="56" class="box"/>
+  <text x="540" y="382" class="tx">setApiCacheEntry(key, payload)</text>
+  <text x="540" y="398" class="sm">updatedAt = Date.now()</text>
+
+  <rect x="160" y="448" width="400" height="56" class="note"/>
+  <text x="360" y="472" class="tx">429 / offline / 5xx: may return stale payload if present</text>
+  <text x="360" y="486" class="sm">api.js cachedRequest catch branch</text>
+
+  <path d="M360,92 L360,112" class="f"/>
+  <path d="M360,164 L312,198" class="f"/>
+  <path d="M360,232 L380,236" class="f"/>
+  <path d="M312,266 L220,292" class="f"/>
+  <path d="M264,232 L140,236 L140,620 L360,620" class="f"/>
+  <path d="M220,364 L360,364 L360,358" class="f"/>
+  <path d="M540,344 L540,358" class="f"/>
+
+  <text x="340" y="192" class="lbl">yes</text>
+  <text x="292" y="276" class="lbl">no</text>
+</svg>

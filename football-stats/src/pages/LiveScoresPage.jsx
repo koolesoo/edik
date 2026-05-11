@@ -278,7 +278,11 @@ const LiveScoresPage = ({ mode = 'results' }) => {
 
   useEffect(() => {
     setAdminTournaments(listTournaments());
-  }, []);
+  }, [currentUser?.username, currentUser?.role]);
+
+  useEffect(() => {
+    setGamesSource('rpl');
+  }, [currentUser?.username, currentUser?.role]);
 
   useEffect(() => {
     if (gamesSource !== 'rpl' && !adminTournaments.some((t) => t.id === gamesSource)) {
@@ -290,12 +294,17 @@ const LiveScoresPage = ({ mode = 'results' }) => {
     try {
       const cached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
       const apiOnly = Array.isArray(cached) ? cached.filter((row) => row && !row.sourceAdmin) : [];
-      const adminExtra = isLiveMode ? getAdminFixtureObjectsLive() : getAdminFixtureObjectsForIsoDate(selectedDate);
+      const adminExtra =
+        currentUser?.role === 'admin'
+          ? isLiveMode
+            ? getAdminFixtureObjectsLive()
+            : getAdminFixtureObjectsForIsoDate(selectedDate)
+          : [];
       setFixtures([...apiOnly, ...adminExtra]);
     } catch (_) {
       setFixtures([]);
     }
-  }, [cacheKey, isLiveMode, selectedDate]);
+  }, [cacheKey, isLiveMode, selectedDate, currentUser?.role]);
 
   const handleRefresh = useCallback(async (opts = {}) => {
     const force = Boolean(opts.force);
@@ -318,7 +327,12 @@ const LiveScoresPage = ({ mode = 'results' }) => {
         ? await getRplLiveMatches()
         : await getMatches(0, selectedDate, selectedDate);
       const apiNormalized = normalizeFixturesPayload(data);
-      const adminExtra = isLiveMode ? getAdminFixtureObjectsLive() : getAdminFixtureObjectsForIsoDate(selectedDate);
+      const adminExtra =
+        currentUser?.role === 'admin'
+          ? isLiveMode
+            ? getAdminFixtureObjectsLive()
+            : getAdminFixtureObjectsForIsoDate(selectedDate)
+          : [];
       const merged = [...apiNormalized, ...adminExtra];
       setFixtures(merged);
       setLastUpdated(formatMskClockHms());
@@ -340,7 +354,12 @@ const LiveScoresPage = ({ mode = 'results' }) => {
         }
         if (Array.isArray(cached) && cached.length > 0) {
           const apiOnly = cached.filter((row) => row && !row.sourceAdmin);
-          const adminExtra = isLiveMode ? getAdminFixtureObjectsLive() : getAdminFixtureObjectsForIsoDate(selectedDate);
+          const adminExtra =
+            currentUser?.role === 'admin'
+              ? isLiveMode
+                ? getAdminFixtureObjectsLive()
+                : getAdminFixtureObjectsForIsoDate(selectedDate)
+              : [];
           setFixtures([...apiOnly, ...adminExtra]);
         }
         setError(null);
@@ -354,12 +373,12 @@ const LiveScoresPage = ({ mode = 'results' }) => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [cacheKey, isLiveMode, mergeStandingsRows, selectedDate]);
+  }, [cacheKey, currentUser?.role, isLiveMode, mergeStandingsRows, selectedDate]);
 
   useEffectWhenVisible(() => {
     setAdminTournaments(listTournaments());
     void handleRefresh();
-  }, [cacheKey, handleRefresh]);
+  }, [cacheKey, currentUser?.username, currentUser?.role, handleRefresh]);
 
   const renderTeamInline = (teamName, crest, isLiked, onLike, score, align = 'left') => {
     const safeName = teamName || 'Team';
@@ -397,15 +416,19 @@ const LiveScoresPage = ({ mode = 'results' }) => {
 
   const isUpcomingFixture = (status) => status === 'SCHEDULED' || status === 'TIMED';
 
-  const handleLikeTeam = (teamName) => {
+  const handleLikeTeam = async (teamName) => {
     if (!teamName) return;
     if (!isAuthenticated) {
       setActionMessage('Чтобы сохранить любимую команду, войдите в профиль.');
       navigate('/profile');
       return;
     }
-    setFavoriteTeamForCurrentUser(teamName);
-    setActionMessage(`Команда ${translateTeamName(teamName)} сохранена в профиль ${currentUser.username}.`);
+    try {
+      await setFavoriteTeamForCurrentUser(teamName);
+      setActionMessage(`Команда ${translateTeamName(teamName)} сохранена в профиль ${currentUser.username}.`);
+    } catch (e) {
+      setActionMessage(e?.message || 'Не удалось сохранить команду. Проверьте сервер и PostgreSQL.');
+    }
   };
 
   const openMatchStats = (match) => {
@@ -605,7 +628,7 @@ const LiveScoresPage = ({ mode = 'results' }) => {
               <span className="body-lg tables-local-chip">Локальный турнир</span>
             )}
           </RplHeroPanel>
-          {adminTournaments.length > 0 ? (
+          {currentUser?.role === 'admin' && adminTournaments.length > 0 ? (
             <div className="tables-source-toggle" role="tablist" aria-label="Источник расписания">
               <button
                 type="button"

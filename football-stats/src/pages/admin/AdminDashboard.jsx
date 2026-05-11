@@ -7,16 +7,12 @@ const MotionSection = motion.section;
 const AdminDashboard = () => (
     <MotionSection
       className="admin-page"
-      aria-labelledby="admin-dashboard-heading"
+      aria-label="Локальные турниры: создание турниров, команд и матчей"
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <section className="section-surface section-surface--plain account-section account-section--admin-hub">
-        <h2 className="headline-md admin-dashboard-title" id="admin-dashboard-heading">
-          Управление данными
-        </h2>
-
         <p className="body-lg admin-muted">
           Добавляйте турниры, команды и матчи на отдельных экранах. Дальнейшая информация отображается в привычных разделах приложения рядом с РПЛ.
         </p>

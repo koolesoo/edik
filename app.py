@@ -1,7 +1,11 @@
 """
 Flask: прокси LiveScore API для РПЛ (`/api/livescore/rpl/*`).
 Фронт: `football-stats/` (Vite проксирует `/api` → порт 5001).
+
+Авторизация и профиль на PostgreSQL: `/api/auth/*`.
+Переменные окружения: DATABASE_URL, JWT_SECRET (см. корневой .env.example).
 """
+import atexit
 from pathlib import Path
 
 try:
@@ -20,13 +24,22 @@ import logging
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+import auth_api
 import livescore_api
 
 app = Flask(__name__)
 CORS(app)
+app.register_blueprint(auth_api.auth_bp)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+try:
+    auth_api.init_auth_pool()
+except Exception as e:
+    logger.warning("auth: не удалось инициализировать PostgreSQL (%s). Эндпоинты /api/auth/* вернут 503.", e)
+
+atexit.register(auth_api.shutdown_auth_pool)
 
 
 @app.route("/api/livescore/rpl/live", methods=["GET"])

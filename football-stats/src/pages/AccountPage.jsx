@@ -35,24 +35,23 @@ const AccountPage = () => {
     try {
       if (mode === 'register') {
         await register({ username, password, role: registerRole });
-        setFormSuccess('Аккаунт создан.');
       } else {
         await login({ username, password });
-        setFormSuccess('Вход выполнен.');
       }
       setPassword('');
+      navigate('/profile', { replace: true });
     } catch (error) {
       setFormError(error.message || 'Не удалось выполнить авторизацию');
     }
   };
 
-  const handleDisplayNameSave = (event) => {
+  const handleDisplayNameSave = async (event) => {
     event.preventDefault();
     setFormError('');
     setFormSuccess('');
     try {
-      updateDisplayNameForCurrentUser(displayName);
-      setFormSuccess('Имя обновлено.');
+      await updateDisplayNameForCurrentUser(displayName);
+      navigate('/profile', { replace: true });
     } catch (error) {
       setFormError(error.message || 'Не удалось обновить имя');
     }

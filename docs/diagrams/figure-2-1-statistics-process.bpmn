@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_Figure21_Footstat"
+             targetNamespace="http://footstat.local/bpmn"
+             exporter="footstat"
+             exporterVersion="1.0">
+  <process id="Process_GetFootballStatistics" name="Получение футбольной статистики" isExecutable="false">
+    <documentation>Общая схема: пользователь → SPA (кэш TTL, дедуп, localStorage) → Flask → LiveScore API. При 429/offline/5xx допускается ответ из устаревшего кэша.</documentation>
+
+    <laneSet id="LaneSet_Main">
+      <lane id="Lane_User" name="Пользователь">
+        <flowNodeRef>StartEvent_1</flowNodeRef>
+        <flowNodeRef>Task_User_Request</flowNodeRef>
+      </lane>
+      <lane id="Lane_SPA" name="Клиент (SPA, api.js)">
+        <flowNodeRef>Task_SPA_CacheKey</flowNodeRef>
+        <flowNodeRef>Gateway_CacheFresh</flowNodeRef>
+        <flowNodeRef>Task_SPA_FromCache</flowNodeRef>
+        <flowNodeRef>Gateway_InFlight</flowNodeRef>
+        <flowNodeRef>Task_SPA_WaitDedupe</flowNodeRef>
+        <flowNodeRef>Task_SPA_HttpGet</flowNodeRef>
+        <flowNodeRef>Gateway_ResponseOk</flowNodeRef>
+        <flowNodeRef>Task_SPA_WriteCache</flowNodeRef>
+        <flowNodeRef>Gateway_StaleFallback</flowNodeRef>
+        <flowNodeRef>Task_SPA_StaleDisplay</flowNodeRef>
+        <flowNodeRef>Task_SPA_Error</flowNodeRef>
+        <flowNodeRef>Task_SPA_Display</flowNodeRef>
+        <flowNodeRef>EndEvent_1</flowNodeRef>
+      </lane>
+      <lane id="Lane_Flask" name="Сервер (Flask-прокси)">
+        <flowNodeRef>Task_Server_Proxy</flowNodeRef>
+      </lane>
+      <lane id="Lane_LiveScore" name="LiveScore API">
+        <flowNodeRef>Task_Provider_Data</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <startEvent id="StartEvent_1" name="Начало"/>
+    <task id="Task_User_Request" name="Запрос статистики&#10;(матч / турнир / дата)"/>
+    <task id="Task_SPA_CacheKey" name="Ключ кэша, проверка TTL&#10;и localStorage"/>
+
+    <exclusiveGateway id="Gateway_CacheFresh" name="Свежий кэш?" default="Flow_NotFresh"/>
+    <task id="Task_SPA_FromCache" name="Ответ из кэша"/>
+
+    <exclusiveGateway id="Gateway_InFlight" name="Тот же ключ уже выполняется?" default="Flow_NewHttp"/>
+    <task id="Task_SPA_WaitDedupe" name="Дедуп: ждать общий запрос"/>
+    <task id="Task_SPA_HttpGet" name="HTTP GET /api"/>
+
+    <exclusiveGateway id="Gateway_ResponseOk" name="Успешный ответ?" default="Flow_ResponseFail"/>
+    <task id="Task_SPA_WriteCache" name="Запись кэша"/>
+
+    <exclusiveGateway id="Gateway_StaleFallback" name="429 / offline / 5xx&#10;и есть старый кэш?" default="Flow_NoStale"/>
+    <task id="Task_SPA_StaleDisplay" name="Отображение устаревшего кэша"/>
+    <task id="Task_SPA_Error" name="Сообщение об ошибке"/>
+
+    <task id="Task_Server_Proxy" name="Проксирование запроса"/>
+    <task id="Task_Provider_Data" name="Ответ провайдера"/>
+
+    <task id="Task_SPA_Display" name="Отображение в UI"/>
+
+    <endEvent id="EndEvent_1" name="Конец"/>
+
+    <sequenceFlow id="Flow_Start_User" sourceRef="StartEvent_1" targetRef="Task_User_Request"/>
+    <sequenceFlow id="Flow_User_SPA" sourceRef="Task_User_Request" targetRef="Task_SPA_CacheKey"/>
+    <sequenceFlow id="Flow_ToFreshGw" sourceRef="Task_SPA_CacheKey" targetRef="Gateway_CacheFresh"/>
+
+    <sequenceFlow id="Flow_FreshYes" name="да" sourceRef="Gateway_CacheFresh" targetRef="Task_SPA_FromCache"/>
+    <sequenceFlow id="Flow_NotFresh" name="нет" sourceRef="Gateway_CacheFresh" targetRef="Gateway_InFlight"/>
+
+    <sequenceFlow id="Flow_DedupeYes" name="да" sourceRef="Gateway_InFlight" targetRef="Task_SPA_WaitDedupe"/>
+    <sequenceFlow id="Flow_NewHttp" name="нет" sourceRef="Gateway_InFlight" targetRef="Task_SPA_HttpGet"/>
+
+    <sequenceFlow id="Flow_Wait_ToGw" sourceRef="Task_SPA_WaitDedupe" targetRef="Gateway_ResponseOk"/>
+    <sequenceFlow id="Flow_Http_Proxy" sourceRef="Task_SPA_HttpGet" targetRef="Task_Server_Proxy"/>
+    <sequenceFlow id="Flow_Proxy_Provider" sourceRef="Task_Server_Proxy" targetRef="Task_Provider_Data"/>
+    <sequenceFlow id="Flow_Provider_Back" sourceRef="Task_Provider_Data" targetRef="Gateway_ResponseOk"/>
+
+    <sequenceFlow id="Flow_OkYes" name="да" sourceRef="Gateway_ResponseOk" targetRef="Task_SPA_WriteCache"/>
+    <sequenceFlow id="Flow_ResponseFail" name="нет" sourceRef="Gateway_ResponseOk" targetRef="Gateway_StaleFallback"/>
+
+    <sequenceFlow id="Flow_Write_Display" sourceRef="Task_SPA_WriteCache" targetRef="Task_SPA_Display"/>
+    <sequenceFlow id="Flow_FromCache_Display" sourceRef="Task_SPA_FromCache" targetRef="Task_SPA_Display"/>
+
+    <sequenceFlow id="Flow_StaleYes" name="да" sourceRef="Gateway_StaleFallback" targetRef="Task_SPA_StaleDisplay"/>
+    <sequenceFlow id="Flow_NoStale" name="нет" sourceRef="Gateway_StaleFallback" targetRef="Task_SPA_Error"/>
+
+    <sequenceFlow id="Flow_Stale_Display" sourceRef="Task_SPA_StaleDisplay" targetRef="Task_SPA_Display"/>
+    <sequenceFlow id="Flow_Error_Display" sourceRef="Task_SPA_Error" targetRef="Task_SPA_Display"/>
+
+    <sequenceFlow id="Flow_ToEnd" sourceRef="Task_SPA_Display" targetRef="EndEvent_1"/>
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_GetFootballStatistics">
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="232" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_User_Request" bpmnElement="Task_User_Request">
+        <dc:Bounds x="230" y="210" width="140" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_CacheKey" bpmnElement="Task_SPA_CacheKey">
+        <dc:Bounds x="420" y="210" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_CacheFresh" bpmnElement="Gateway_CacheFresh" isMarkerVisible="true">
+        <dc:Bounds x="620" y="225" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_FromCache" bpmnElement="Task_SPA_FromCache">
+        <dc:Bounds x="710" y="210" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_InFlight" bpmnElement="Gateway_InFlight" isMarkerVisible="true">
+        <dc:Bounds x="620" y="330" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_WaitDedupe" bpmnElement="Task_SPA_WaitDedupe">
+        <dc:Bounds x="430" y="400" width="130" height="70"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_HttpGet" bpmnElement="Task_SPA_HttpGet">
+        <dc:Bounds x="580" y="400" width="120" height="70"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Server_Proxy" bpmnElement="Task_Server_Proxy">
+        <dc:Bounds x="560" y="520" width="160" height="70"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_Provider_Data" bpmnElement="Task_Provider_Data">
+        <dc:Bounds x="560" y="630" width="160" height="70"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_ResponseOk" bpmnElement="Gateway_ResponseOk" isMarkerVisible="true">
+        <dc:Bounds x="735" y="410" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_WriteCache" bpmnElement="Task_SPA_WriteCache">
+        <dc:Bounds x="820" y="395" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gateway_StaleFallback" bpmnElement="Gateway_StaleFallback" isMarkerVisible="true">
+        <dc:Bounds x="620" y="500" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_StaleDisplay" bpmnElement="Task_SPA_StaleDisplay">
+        <dc:Bounds x="710" y="485" width="150" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_Error" bpmnElement="Task_SPA_Error">
+        <dc:Bounds x="430" y="490" width="140" height="65"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Task_SPA_Display" bpmnElement="Task_SPA_Display">
+        <dc:Bounds x="900" y="210" width="140" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1088" y="232" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_Start_User" bpmnElement="Flow_Start_User">
+        <di:waypoint x="188" y="250"/>
+        <di:waypoint x="230" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_User_SPA" bpmnElement="Flow_User_SPA">
+        <di:waypoint x="370" y="250"/>
+        <di:waypoint x="420" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_ToFreshGw" bpmnElement="Flow_ToFreshGw">
+        <di:waypoint x="580" y="250"/>
+        <di:waypoint x="620" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_FreshYes" bpmnElement="Flow_FreshYes">
+        <di:waypoint x="670" y="250"/>
+        <di:waypoint x="710" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NotFresh" bpmnElement="Flow_NotFresh">
+        <di:waypoint x="645" y="275"/>
+        <di:waypoint x="645" y="330"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_DedupeYes" bpmnElement="Flow_DedupeYes">
+        <di:waypoint x="620" y="355"/>
+        <di:waypoint x="495" y="355"/>
+        <di:waypoint x="495" y="400"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NewHttp" bpmnElement="Flow_NewHttp">
+        <di:waypoint x="670" y="355"/>
+        <di:waypoint x="640" y="400"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Wait_ToGw" bpmnElement="Flow_Wait_ToGw">
+        <di:waypoint x="560" y="435"/>
+        <di:waypoint x="735" y="435"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Http_Proxy" bpmnElement="Flow_Http_Proxy">
+        <di:waypoint x="640" y="470"/>
+        <di:waypoint x="640" y="520"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Proxy_Provider" bpmnElement="Flow_Proxy_Provider">
+        <di:waypoint x="640" y="590"/>
+        <di:waypoint x="640" y="630"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Provider_Back" bpmnElement="Flow_Provider_Back">
+        <di:waypoint x="720" y="665"/>
+        <di:waypoint x="760" y="665"/>
+        <di:waypoint x="760" y="435"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_OkYes" bpmnElement="Flow_OkYes">
+        <di:waypoint x="785" y="435"/>
+        <di:waypoint x="820" y="435"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_ResponseFail" bpmnElement="Flow_ResponseFail">
+        <di:waypoint x="760" y="460"/>
+        <di:waypoint x="760" y="525"/>
+        <di:waypoint x="670" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Write_Display" bpmnElement="Flow_Write_Display">
+        <di:waypoint x="950" y="395"/>
+        <di:waypoint x="970" y="250"/>
+        <di:waypoint x="900" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_FromCache_Display" bpmnElement="Flow_FromCache_Display">
+        <di:waypoint x="840" y="250"/>
+        <di:waypoint x="900" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_StaleYes" bpmnElement="Flow_StaleYes">
+        <di:waypoint x="670" y="525"/>
+        <di:waypoint x="710" y="525"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_NoStale" bpmnElement="Flow_NoStale">
+        <di:waypoint x="620" y="525"/>
+        <di:waypoint x="500" y="522"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Stale_Display" bpmnElement="Flow_Stale_Display">
+        <di:waypoint x="860" y="525"/>
+        <di:waypoint x="970" y="525"/>
+        <di:waypoint x="970" y="290"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_Error_Display" bpmnElement="Flow_Error_Display">
+        <di:waypoint x="570" y="522"/>
+        <di:waypoint x="970" y="290"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_ToEnd" bpmnElement="Flow_ToEnd">
+        <di:waypoint x="1040" y="250"/>
+        <di:waypoint x="1088" y="250"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

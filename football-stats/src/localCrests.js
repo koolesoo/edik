@@ -32,6 +32,11 @@ const crestPublicUrl = (file) => {
   return `${prefix}crests/${safeFile}`;
 };
 
+/** Марка РПЛ (`public/crests/РПЛ.png`) — шапка профиля и вкладка «Команда» без клубной эмблемы. */
+export function getRplLeagueMarkUrl() {
+  return crestPublicUrl('РПЛ.png');
+}
+
 /** Русские имена → файл в `public/crests/`, если нет записи в `CDN_CREST_URL_BY_RU`. */
 const CREST_FILE_BY_RU = {};
 

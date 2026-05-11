@@ -215,7 +215,7 @@ const ProfileTeamPage = () => {
   const [isChangeFavoriteOpen, setIsChangeFavoriteOpen] = useState(false);
   const [changeFavoriteSelection, setChangeFavoriteSelection] = useState('');
 
-  const clearFavoriteTeam = () => {
+  const clearFavoriteTeam = async () => {
     const u = currentUser?.username;
     const fav = String(currentUser?.favoriteTeam || '').trim();
     if (u && fav) {
@@ -225,7 +225,13 @@ const ProfileTeamPage = () => {
         /* ignore */
       }
     }
-    setFavoriteTeamForCurrentUser('');
+    try {
+      await setFavoriteTeamForCurrentUser('');
+    } catch (e) {
+      setOverviewError(e?.message || 'Не удалось обновить профиль на сервере.');
+      setIsDeleteSheetOpen(false);
+      return;
+    }
     setTeamOverview(null);
     setOverviewLoading(false);
     setOverviewError('');
@@ -253,9 +259,13 @@ const ProfileTeamPage = () => {
     setPendingFavoriteTeam(teamOptions[0]);
   }, [isAuthenticated, currentUser?.favoriteTeam, teamOptions, pendingFavoriteTeam]);
 
-  const applyFavoriteTeam = () => {
+  const applyFavoriteTeam = async () => {
     if (!pendingFavoriteTeam) return;
-    setFavoriteTeamForCurrentUser(pendingFavoriteTeam);
+    try {
+      await setFavoriteTeamForCurrentUser(pendingFavoriteTeam);
+    } catch (e) {
+      setOverviewError(e?.message || 'Не удалось сохранить команду.');
+    }
   };
 
   const openChangeFavoriteSheet = () => {
@@ -265,15 +275,19 @@ const ProfileTeamPage = () => {
     setIsChangeFavoriteOpen(true);
   };
 
-  const applyChangeFavoriteTeam = () => {
+  const applyChangeFavoriteTeam = async () => {
     if (!changeFavoriteSelection) return;
     const cur = translateTeamName(currentUser?.favoriteTeam) || String(currentUser?.favoriteTeam || '').trim();
     if (changeFavoriteSelection === cur) {
       setIsChangeFavoriteOpen(false);
       return;
     }
-    setFavoriteTeamForCurrentUser(changeFavoriteSelection);
-    setIsChangeFavoriteOpen(false);
+    try {
+      await setFavoriteTeamForCurrentUser(changeFavoriteSelection);
+      setIsChangeFavoriteOpen(false);
+    } catch (e) {
+      setOverviewError(e?.message || 'Не удалось сменить команду.');
+    }
   };
 
   /** Сброс только при выходе или смене клуба (не при каждом повторном запросе). */

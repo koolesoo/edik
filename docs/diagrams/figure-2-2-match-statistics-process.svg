@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="780" viewBox="0 0 1020 780">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#1a365d"/>
+    </marker>
+    <style><![CDATA[
+      .pool { fill: #f8fafc; stroke: #2c5282; stroke-width: 2; rx: 3; }
+      .ln { stroke: #cbd5e0; stroke-width: 1; }
+      .lb { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 12px; fill: #1a202c; font-weight: 600; }
+      .task { fill: #fff; stroke: #2b6cb0; stroke-width: 1.5; rx: 6; }
+      .tx { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 10px; fill: #1a202c; text-anchor: middle; }
+      .gw { fill: #fffbeb; stroke: #b7791f; stroke-width: 1.5; }
+      .se { fill: #e6fffa; stroke: #2c7a7b; stroke-width: 2; }
+      .ee { fill: #fff5f5; stroke: #c53030; stroke-width: 2; }
+      .f { stroke: #2d3748; stroke-width: 1.2; fill: none; marker-end: url(#a); }
+      .ttl { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 13.5px; fill: #1a202c; font-weight: 700; text-anchor: middle; }
+      .note { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 9px; fill: #718096; }
+      .lbl { font-family: system-ui, "Segoe UI", Arial, sans-serif; font-size: 9px; fill: #4a5568; }
+    ]]></style>
+  </defs>
+
+  <text x="510" y="24" class="ttl">Рисунок 2.2 — BPMN-диаграмма процесса получения статистики матча</text>
+
+  <rect x="28" y="40" width="964" height="722" class="pool"/>
+  <line x1="28" y1="142" x2="992" y2="142" class="ln"/>
+  <line x1="28" y1="472" x2="992" y2="472" class="ln"/>
+  <line x1="28" y1="572" x2="992" y2="572" class="ln"/>
+
+  <text x="40" y="98" class="lb">Пользователь</text>
+  <text x="40" y="182" class="lb">Клиент (MatchStatsPage + api.js)</text>
+  <text x="40" y="508" class="lb">Сервер (Flask)</text>
+  <text x="40" y="608" class="lb">LiveScore API</text>
+
+  <text x="220" y="122" class="note">Выбор матча → navigate('/match-stats', state)</text>
+
+  <circle cx="110" cy="108" r="11" class="se"/>
+  <rect x="154" y="86" width="150" height="44" class="task"/>
+  <text x="229" y="112" class="tx">Выбор матча</text>
+
+  <rect x="340" y="190" width="200" height="48" class="task"/>
+  <text x="440" y="212" class="tx">Экран статистики,</text>
+  <text x="440" y="226" class="tx">считывание match_id</text>
+
+  <polygon points="582,198 608,212 582,226 556,212" class="gw"/>
+  <text x="612" y="208" class="lbl">есть id?</text>
+
+  <rect x="664" y="184" width="140" height="56" class="task"/>
+  <text x="734" y="208" class="tx">Резервный расчёт</text>
+  <text x="734" y="222" class="tx">на клиенте (пустой ответ API)</text>
+
+  <polygon points="582,292 608,306 582,320 556,306" class="gw"/>
+  <text x="612" y="286" class="lbl">loc_*?</text>
+
+  <rect x="310" y="334" width="168" height="48" class="task"/>
+  <text x="394" y="354" class="tx">admin-каталог</text>
+  <text x="394" y="368" class="tx">localStorage</text>
+
+  <rect x="508" y="334" width="168" height="48" class="task"/>
+  <text x="592" y="354" class="tx">Кэш + GET</text>
+  <text x="592" y="368" class="tx">…/match-stats</text>
+
+  <rect x="470" y="488" width="180" height="48" class="task"/>
+  <text x="560" y="514" class="tx">Прокси match-stats</text>
+
+  <rect x="470" y="584" width="180" height="48" class="task"/>
+  <text x="560" y="610" class="tx">Статистика по match_id</text>
+
+  <rect x="746" y="326" width="200" height="56" class="task"/>
+  <text x="846" y="348" class="tx">Маппинг и нормализация</text>
+  <text x="846" y="362" class="tx">(поля API → UI)</text>
+
+  <rect x="784" y="250" width="164" height="44" class="task"/>
+  <text x="866" y="278" class="tx">Отображение в UI</text>
+
+  <circle cx="972" cy="716" r="13" class="ee"/>
+  <circle cx="972" cy="716" r="7" fill="#fff" stroke="#c53030" stroke-width="2"/>
+
+  <path d="M121,108 L154,108" class="f"/>
+  <path d="M304,108 L340,214" class="f"/>
+  <path d="M540,212 L556,212" class="f"/>
+  <path d="M608,212 L664,212" class="f"/>
+  <path d="M582,226 L582,292" class="f"/>
+  <path d="M556,306 L310,358 L394,382" class="f"/>
+  <path d="M608,306 L508,358" class="f"/>
+  <path d="M676,358 L746,354" class="f"/>
+  <path d="M592,382 L592,488" class="f"/>
+  <path d="M560,536 L560,584" class="f"/>
+  <path d="M650,608 L650,340 L746,354" class="f"/>
+  <path d="M846,382 L846,294" class="f"/>
+  <path d="M866,250 L866,218 L784,218" class="f"/>
+  <path d="M784,272 L784,716 L959,716" class="f"/>
+  <path d="M734,240 L784,272" class="f"/>
+
+  <text x="598" y="176" class="lbl">нет</text>
+  <text x="624" y="240" class="lbl">да</text>
+  <text x="538" y="318" class="lbl">да</text>
+  <text x="548" y="310" class="lbl">нет</text>
+
+  <text x="360" y="176" class="note">Загрузка откладывается, если вкладка скрыта (visibility)</text>
+</svg>

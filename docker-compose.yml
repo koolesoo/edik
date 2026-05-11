@@ -1,0 +1,23 @@
+# Локальная PostgreSQL для /api/auth (регистрация, JWT, профиль).
+# Запуск: docker compose up -d
+# Остановка: docker compose down
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: footstat
+      POSTGRES_PASSWORD: footstat_dev_local
+      POSTGRES_DB: footstat
+    ports:
+      - "5432:5432"
+    volumes:
+      - footstat_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U footstat -d footstat"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  footstat_pgdata:

@@ -1,4 +1,13 @@
 .DS_Store
+Thumbs.db
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+*.swp
+*.swo
+
+# Служебные каталоги редакторов (не коммитить)
 .cursor/
 .env
 .env.*

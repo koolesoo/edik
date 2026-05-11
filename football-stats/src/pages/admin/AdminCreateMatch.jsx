@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
 import { addMatch, listTeams, listTournaments } from '../../services/adminCatalog';
 
 const MotionSection = motion.section;
@@ -8,10 +9,14 @@ const MotionSection = motion.section;
 const AdminCreateMatch = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { authReady } = useAuth();
   const initialTid = params.get('tournamentId') || '';
-  const tournaments = useMemo(() => listTournaments(), []);
+  const tournaments = useMemo(() => (authReady ? listTournaments() : []), [authReady]);
   const [tournamentId, setTournamentId] = useState(initialTid);
-  const teams = useMemo(() => (tournamentId ? listTeams(tournamentId) : []), [tournamentId]);
+  const teams = useMemo(
+    () => (authReady && tournamentId ? listTeams(tournamentId) : []),
+    [authReady, tournamentId],
+  );
   const [homeTeamId, setHomeTeamId] = useState('');
   const [awayTeamId, setAwayTeamId] = useState('');
   const [homeScore, setHomeScore] = useState('0');

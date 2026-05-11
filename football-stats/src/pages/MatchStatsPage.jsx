@@ -3,50 +3,15 @@ import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { formatDateTimeLineRuMsk, formatDayMonthRuMsk, formatTimeShortRuMsk } from '../dateTimeMsk';
 import { MatchStatsListSkeleton } from '../components/DataSkeletons';
-import { isLocalMatchId } from '../services/adminCatalog';
+import { MatchStatsForm } from '../components/MatchStatsForm';
+import { getMatchById, isLocalMatchId, updateMatchScores } from '../services/adminCatalog';
+import { DISPLAY_STATS, normalizeShotsAgainstGoals, parseGoalCount } from '../matchStatsBundleRows';
+import { useAuth } from '../context/AuthContext';
 import { dropApiCacheKey, getMatchStatistics } from '../services/api';
 import { preferCrest } from '../localCrests';
 import { translateTeamName } from '../teamNames';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-
-/** Целое число голов из счёта карточки матча (не число → 0). */
-const parseGoalCount = (raw) => {
-  const n = Number.parseInt(String(raw ?? '').replace(/\s+/g, ''), 10);
-  if (!Number.isFinite(n) || n < 0) return 0;
-  return n;
-};
-
-/**
- * Инварианты: удары в створ ≤ всего ударов; удары в створ ≥ голов; всего ударов ≥ голов.
- * @param {StatRow[]} rows
- * @param {unknown} homeScoreRaw
- * @param {unknown} awayScoreRaw
- * @returns {StatRow[]}
- */
-const normalizeShotsAgainstGoals = (rows, homeScoreRaw, awayScoreRaw) => {
-  const gHome = parseGoalCount(homeScoreRaw);
-  const gAway = parseGoalCount(awayScoreRaw);
-  const shotRow = rows.find((r) => r.key === 'shots');
-  const otRow = rows.find((r) => r.key === 'on_target');
-  if (!shotRow || !otRow) return rows;
-
-  let homeShots = Math.max(0, Math.round(Number(shotRow.home) || 0));
-  let awayShots = Math.max(0, Math.round(Number(shotRow.away) || 0));
-  let homeOt = Math.max(0, Math.round(Number(otRow.home) || 0));
-  let awayOt = Math.max(0, Math.round(Number(otRow.away) || 0));
-
-  homeShots = Math.max(homeShots, gHome);
-  awayShots = Math.max(awayShots, gAway);
-  homeOt = Math.max(Math.min(homeOt, homeShots), gHome);
-  awayOt = Math.max(Math.min(awayOt, awayShots), gAway);
-
-  return rows.map((row) => {
-    if (row.key === 'shots') return { ...row, home: homeShots, away: awayShots };
-    if (row.key === 'on_target') return { ...row, home: homeOt, away: awayOt };
-    return row;
-  });
-};
 
 const hashSeed = (text) => {
   let hash = 0;
@@ -56,17 +21,6 @@ const hashSeed = (text) => {
   }
   return hash;
 };
-
-/** @typedef {{ key: string, label: string, home: number, away: number, suffix: string, scaleMode: 'share' | 'max' }} StatRow */
-
-const DISPLAY_STATS = [
-  { key: 'possession', label: 'Владение мячом', suffix: '%', scaleMode: 'share' },
-  { key: 'shots', label: 'Удары', suffix: '', scaleMode: 'max' },
-  { key: 'on_target', label: 'Удары в створ', suffix: '', scaleMode: 'max' },
-  { key: 'corners', label: 'Угловые', suffix: '', scaleMode: 'max' },
-  { key: 'offsides', label: 'Офсайды', suffix: '', scaleMode: 'max' },
-  { key: 'fouls', label: 'Фолы', suffix: '', scaleMode: 'max' },
-];
 
 const normToken = (s) => String(s || '').toUpperCase().replace(/[\s-]+/g, '_');
 
@@ -88,6 +42,16 @@ const classifyStatKey = (type, label) => {
   if (/офсайд/i.test(ruLine)) return 'offsides';
   if (/углов|corner/i.test(ruLine)) return 'corners';
   if (/фолы?|foul/i.test(ruLine)) return 'fouls';
+  if (/точност.*передач|pass accuracy|passing accuracy/i.test(ruLine)) return 'pass_accuracy';
+  if (/передач|total passes|^passes$/i.test(ruLine) && !/точност|accuracy/i.test(ruLine)) return 'passes';
+  if (/больш(ие|ой)|big chances?|big chance/i.test(ruLine)) return 'big_chances';
+  if (/сейв|goalkeeper saves?|^saves$/i.test(ruLine)) return 'saves';
+  if (/отбор|tackles?/i.test(ruLine)) return 'tackles';
+  if (/перехват|interceptions?/i.test(ruLine)) return 'interceptions';
+  if (/вынос|clearances?/i.test(ruLine)) return 'clearances';
+  if (/жёлты|желты|yellow cards?/i.test(ruLine)) return 'yellow_cards';
+  if (/красн|red cards?/i.test(ruLine)) return 'red_cards';
+  if (/опасн.*атак|dangerous attacks?/i.test(ruLine)) return 'dangerous_attacks';
   if (
     /^удары?$|total shots|всего ударов/i.test(rawLabel.trim())
     || /^удары?$/i.test(rawType.trim())
@@ -107,7 +71,17 @@ const classifyStatKey = (type, label) => {
   if (/OFFSIDE|ОФСАЙД/.test(both)) return 'offsides';
   if (/CORNER|УГЛОВ/.test(both)) return 'corners';
   if (/FOUL|ФОЛ/.test(both)) return 'fouls';
-  if (/DANGEROUS_ATTACK|^ATTACKS?$|FREE_KICK|GOAL_KICK|PENALT|RED_CARD|SAVE|BLOCKED|SUBSTIT/.test(both)) {
+  if (/PASS_ACCURACY|PASSING_ACCURACY|ТОЧНОСТЬ_ПЕРЕДАЧ/.test(both)) return 'pass_accuracy';
+  if (/TOTAL_PASSES|PASSES_COMPLETED|ПЕРЕДАЧ(И)?$/.test(both) && !/ACCURACY/.test(both)) return 'passes';
+  if (/BIG_CHANCE|BIG_CHANCES|БОЛЬШИЕ_МОМЕНТЫ/.test(both)) return 'big_chances';
+  if (/GOALKEEPER_SAVE|GOALKEEPER_SAVES|^SAVES$|СЕЙВ/.test(both)) return 'saves';
+  if (/TACKLE|ОТБОР/.test(both)) return 'tackles';
+  if (/INTERCEPTION|ПЕРЕХВАТ/.test(both)) return 'interceptions';
+  if (/CLEARANCE|ВЫНОС/.test(both)) return 'clearances';
+  if (/YELLOW_CARD|ЖЁЛТ|ЖЕЛТ/.test(both)) return 'yellow_cards';
+  if (/RED_CARD|КРАСН/.test(both)) return 'red_cards';
+  if (/DANGEROUS_ATTACK|ОПАСН/.test(both)) return 'dangerous_attacks';
+  if (/FREE_KICK|GOAL_KICK|PENALT|BLOCKED_SHOT|SUBSTIT|^ATTACKS?$/.test(both)) {
     return null;
   }
   if (/TOTAL_SHOTS|SHOTS_TOTAL|SHOTS_OFF|OFF_TARGET|^SHOTS?$/.test(both)) return 'shots';
@@ -138,6 +112,7 @@ const buildDisplayStatsFromApi = (rows) => {
     away: acc[def.key]?.away ?? 0,
     suffix: def.suffix,
     scaleMode: def.scaleMode,
+    tier: def.tier,
   }));
 };
 
@@ -147,7 +122,8 @@ const buildDisplayStatsFromApi = (rows) => {
  * @param {string} seedText
  * @returns {StatRow[]}
  */
-const buildFakeStats = (homeTeam, awayTeam, seedText) => {
+/** Показатели для экрана, если API не вернуло строк статистики: детерминированный расчёт от пар команд и времени. */
+const buildClientFallbackStats = (homeTeam, awayTeam, seedText) => {
   const seed = hashSeed(`${homeTeam}-${awayTeam}-${seedText}`);
   const delta = (seed % 11) - 5;
 
@@ -177,14 +153,43 @@ const buildFakeStats = (homeTeam, awayTeam, seedText) => {
   const homeFouls = clamp(11 - Math.round(delta / 2), 8, 16);
   const awayFouls = clamp(11 + Math.round(delta / 2), 8, 16);
 
-  return [
-    { key: 'possession', label: 'Владение мячом', home: homePossession, away: awayPossession, suffix: '%', scaleMode: 'share' },
-    { key: 'shots', label: 'Удары', home: homeShots, away: awayShots, suffix: '', scaleMode: 'max' },
-    { key: 'on_target', label: 'Удары в створ', home: homeOnTarget, away: awayOnTarget, suffix: '', scaleMode: 'max' },
-    { key: 'corners', label: 'Угловые', home: homeCorners, away: awayCorners, suffix: '', scaleMode: 'max' },
-    { key: 'offsides', label: 'Офсайды', home: homeOffsides, away: awayOffsides, suffix: '', scaleMode: 'max' },
-    { key: 'fouls', label: 'Фолы', home: homeFouls, away: awayFouls, suffix: '', scaleMode: 'max' },
-  ];
+  const statsByKey = {
+    possession: { home: homePossession, away: awayPossession },
+    shots: { home: homeShots, away: awayShots },
+    on_target: { home: homeOnTarget, away: awayOnTarget },
+    corners: { home: homeCorners, away: awayCorners },
+    offsides: { home: homeOffsides, away: awayOffsides },
+    fouls: { home: homeFouls, away: awayFouls },
+    passes: {
+      home: clamp(380 + seed % 80, 280, 520),
+      away: clamp(380 - seed % 60, 280, 520),
+    },
+    pass_accuracy: {
+      home: clamp(78 + (seed % 8), 65, 92),
+      away: clamp(76 + ((seed + 3) % 9), 65, 92),
+    },
+    big_chances: { home: clamp((seed % 4) + 1, 0, 6), away: clamp(((seed + 1) % 4) + 1, 0, 6) },
+    saves: { home: clamp(2 + (seed % 5), 0, 9), away: clamp(2 + ((seed + 2) % 5), 0, 9) },
+    tackles: { home: clamp(16 + delta, 10, 28), away: clamp(16 - delta, 10, 28) },
+    interceptions: { home: clamp(8 + (seed % 6), 3, 18), away: clamp(8 + ((seed + 1) % 6), 3, 18) },
+    clearances: { home: clamp(18 + (seed % 7), 8, 32), away: clamp(17 + ((seed + 2) % 7), 8, 32) },
+    yellow_cards: { home: clamp((seed % 4), 0, 5), away: clamp(((seed + 2) % 4), 0, 5) },
+    red_cards: { home: seed % 17 === 0 ? 1 : 0, away: (seed + 5) % 19 === 0 ? 1 : 0 },
+    dangerous_attacks: { home: clamp(42 + delta * 2, 28, 72), away: clamp(42 - delta * 2, 28, 72) },
+  };
+
+  return DISPLAY_STATS.map((def) => {
+    const pair = statsByKey[def.key] || { home: 0, away: 0 };
+    return {
+      key: def.key,
+      label: def.label,
+      home: pair.home,
+      away: pair.away,
+      suffix: def.suffix,
+      scaleMode: def.scaleMode,
+      tier: def.tier,
+    };
+  });
 };
 
 /**
@@ -278,6 +283,7 @@ const STATUS_LABELS = {
 const MatchStatsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const match = location.state?.match || {};
   const homeTeam = match.homeTeam || 'Home';
   const awayTeam = match.awayTeam || 'Away';
@@ -323,9 +329,66 @@ const MatchStatsPage = () => {
 
   const livescoreMatchId = match.livescoreMatchId ?? match.fixtureId ?? null;
   const isAdminLocalMatch = isLocalMatchId(livescoreMatchId);
+  const [liveH, setLiveH] = useState(0);
+  const [liveA, setLiveA] = useState(0);
+  const [scoreMsg, setScoreMsg] = useState('');
+  const [scoreErr, setScoreErr] = useState('');
+  /** После сохранения счёта перечитываем каталог для шапки (location.state устаревает). */
+  const [scoreCardRev, setScoreCardRev] = useState(0);
   const [apiStats, setApiStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState('');
+  /** Локальный матч админа: по умолчанию обычные полоски; форма — только по кнопке. */
+  const [adminStatsEditing, setAdminStatsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!livescoreMatchId) return;
+    if (isAdminLocalMatch && currentUser?.role === 'admin' && adminStatsEditing) {
+      const m = getMatchById(String(livescoreMatchId));
+      if (m) {
+        setLiveH(Number(m.homeScore) || 0);
+        setLiveA(Number(m.awayScore) || 0);
+      } else {
+        setLiveH(parseGoalCount(match.homeScore));
+        setLiveA(parseGoalCount(match.awayScore));
+      }
+      return;
+    }
+    setLiveH(parseGoalCount(match.homeScore));
+    setLiveA(parseGoalCount(match.awayScore));
+  }, [
+    livescoreMatchId,
+    isAdminLocalMatch,
+    currentUser?.role,
+    adminStatsEditing,
+    match.homeScore,
+    match.awayScore,
+    scoreCardRev,
+  ]);
+
+  const catalogMatchSnapshot = useMemo(() => {
+    if (!isAdminLocalMatch || !livescoreMatchId) return null;
+    return getMatchById(String(livescoreMatchId));
+  }, [isAdminLocalMatch, livescoreMatchId, scoreCardRev]);
+
+  const editingScoresInForm = Boolean(
+    isAdminLocalMatch && currentUser?.role === 'admin' && adminStatsEditing,
+  );
+  const scoreGHome = editingScoresInForm
+    ? liveH
+    : catalogMatchSnapshot != null
+      ? Number(catalogMatchSnapshot.homeScore) || 0
+      : parseGoalCount(match.homeScore);
+  const scoreGAway = editingScoresInForm
+    ? liveA
+    : catalogMatchSnapshot != null
+      ? Number(catalogMatchSnapshot.awayScore) || 0
+      : parseGoalCount(match.awayScore);
+
+  const displayHomeScore =
+    catalogMatchSnapshot != null ? Number(catalogMatchSnapshot.homeScore) || 0 : homeScore;
+  const displayAwayScore =
+    catalogMatchSnapshot != null ? Number(catalogMatchSnapshot.awayScore) || 0 : awayScore;
 
   const loadStatsSeq = useRef(0);
   const loadStats = useCallback(
@@ -353,6 +416,23 @@ const MatchStatsPage = () => {
     },
     [livescoreMatchId, isAdminLocalMatch],
   );
+
+  const canSaveLocalOrLiveScore = Boolean(
+    livescoreMatchId && isAdminLocalMatch && currentUser?.role === 'admin' && adminStatsEditing,
+  );
+
+  const handleSaveScores = useCallback(() => {
+    setScoreErr('');
+    if (!canSaveLocalOrLiveScore) return;
+    try {
+      updateMatchScores(livescoreMatchId, liveH, liveA);
+      setScoreMsg('Счёт сохранён.');
+      setScoreCardRev((n) => n + 1);
+      void loadStats({ force: true });
+    } catch (e) {
+      setScoreErr(e?.message || 'Не удалось сохранить счёт');
+    }
+  }, [canSaveLocalOrLiveScore, livescoreMatchId, liveH, liveA, loadStats]);
 
   useEffect(() => {
     if (!livescoreMatchId) {
@@ -388,13 +468,28 @@ const MatchStatsPage = () => {
     };
   }, [livescoreMatchId, loadStats]);
 
+  useEffect(() => {
+    setAdminStatsEditing(false);
+    setScoreCardRev(0);
+  }, [livescoreMatchId]);
+
   const stats = useMemo(() => {
     const base =
       apiStats && apiStats.length > 0
         ? buildDisplayStatsFromApi(apiStats)
-        : buildFakeStats(homeTeam, awayTeam, kickoffRaw || kickoffFallback);
-    return normalizeShotsAgainstGoals(base, homeScore, awayScore);
-  }, [apiStats, homeTeam, awayTeam, kickoffFallback, kickoffRaw, homeScore, awayScore]);
+        : buildClientFallbackStats(homeTeam, awayTeam, kickoffRaw || kickoffFallback);
+    const shotFixed = isAdminLocalMatch
+      ? base
+      : normalizeShotsAgainstGoals(base, scoreGHome, scoreGAway);
+    return shotFixed.map((row) => {
+      if (row.key !== 'pass_accuracy') return row;
+      return {
+        ...row,
+        home: clamp(Math.round(Number(row.home) || 0), 0, 100),
+        away: clamp(Math.round(Number(row.away) || 0), 0, 100),
+      };
+    });
+  }, [apiStats, homeTeam, awayTeam, kickoffFallback, kickoffRaw, isAdminLocalMatch, scoreGHome, scoreGAway]);
 
   const apiReturnedEmpty = Boolean(
     !statsLoading
@@ -404,14 +499,13 @@ const MatchStatsPage = () => {
       && apiStats.length === 0
       && !statsError,
   );
-  const adminLocalStatsMissing = Boolean(
-    !statsLoading
-      && isAdminLocalMatch
-      && Array.isArray(apiStats)
-      && apiStats.length === 0
-      && !statsError,
-  );
   const showStatsSkeleton = Boolean(statsLoading && apiStats === null && livescoreMatchId);
+  const showAdminInlineEditor = Boolean(
+    isAdminLocalMatch && currentUser?.role === 'admin' && adminStatsEditing,
+  );
+  const showMatchStatsBars = Boolean(
+    !showStatsSkeleton && (!isAdminLocalMatch || currentUser?.role !== 'admin' || !adminStatsEditing),
+  );
 
   useEffect(() => {
     const prev = document.title;
@@ -440,6 +534,19 @@ const MatchStatsPage = () => {
             >
               <span className="profile-back-chevron" aria-hidden="true">‹</span>
             </button>
+            {isAdminLocalMatch && currentUser?.role === 'admin' && !adminStatsEditing ? (
+              <button
+                type="button"
+                className="pill-btn pill-btn--secondary match-stats-edit-stats-btn"
+                onClick={() => {
+                  setScoreMsg('');
+                  setScoreErr('');
+                  setAdminStatsEditing(true);
+                }}
+              >
+                Редактировать статистику
+              </button>
+            ) : null}
           </div>
 
           <div className="match-stats-kickoff-stack">
@@ -477,14 +584,68 @@ const MatchStatsPage = () => {
               <span className="match-stats-abbr">{homeDisplayName}</span>
             </div>
 
-            <div className="match-stats-score-mid" aria-label="Счёт">
-              <span className="match-stats-score-num">
-                {homeScore}
-                {' '}
-                :
-                {' '}
-                {awayScore}
-              </span>
+            <div
+              className={`match-stats-score-mid${editingScoresInForm ? ' match-stats-score-mid--hero-edit' : ''}`}
+              aria-label="Счёт"
+            >
+              {editingScoresInForm ? (
+                <div className="match-stats-hero-score-inline">
+                  <div className="match-stats-hero-score-digits" role="group">
+                    <input
+                      type="number"
+                      min={0}
+                      className="match-stats-score-input match-stats-score-input--hero"
+                      value={liveH}
+                      onChange={(e) => setLiveH(Math.max(0, Math.round(Number(e.target.value) || 0)))}
+                      aria-label="Голы хозяев"
+                    />
+                    <span className="match-stats-hero-score-colon" aria-hidden="true">
+                      :
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      className="match-stats-score-input match-stats-score-input--hero"
+                      value={liveA}
+                      onChange={(e) => setLiveA(Math.max(0, Math.round(Number(e.target.value) || 0)))}
+                      aria-label="Голы гостей"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="pill-btn pill-btn--secondary match-stats-hero-score-save"
+                    onClick={handleSaveScores}
+                  >
+                    Сохранить счёт
+                  </button>
+                  {scoreMsg ? (
+                    <p className="match-stats-hero-score-feedback match-stats-hero-score-feedback--ok">{scoreMsg}</p>
+                  ) : null}
+                  {scoreErr ? (
+                    <p className="match-stats-hero-score-feedback match-stats-hero-score-feedback--err">{scoreErr}</p>
+                  ) : null}
+                  {scoreMsg ? (
+                    <button
+                      type="button"
+                      className="pill-btn pill-btn--ghost match-stats-hero-score-clear-msg"
+                      onClick={() => {
+                        setScoreMsg('');
+                        setScoreErr('');
+                      }}
+                    >
+                      Изменить снова
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <span className="match-stats-score-num">
+                  {displayHomeScore}
+                  {' '}
+                  :
+                  {' '}
+                  {displayAwayScore}
+                </span>
+              )}
             </div>
 
             <div className="match-stats-side match-stats-side--away">
@@ -518,25 +679,43 @@ const MatchStatsPage = () => {
               Ориентировочная статистика (нет id матча для API).
             </p>
           ) : null}
-          {isAdminLocalMatch && Array.isArray(apiStats) && apiStats.length > 0 ? (
-            <p className="body-lg match-stats-hint">Локальные данные администратора.</p>
-          ) : null}
-          {adminLocalStatsMissing ? (
-            <p className="body-lg match-stats-hint">
-              Статистика для этого матча не задана — ниже ориентировочные значения.
-            </p>
+          {showAdminInlineEditor ? (
+            <div className="match-stats-admin-editor">
+              <div className="match-stats-admin-editor-head">
+                <button
+                  type="button"
+                  className="pill-btn pill-btn--ghost match-stats-close-editor-btn"
+                  onClick={() => {
+                    setAdminStatsEditing(false);
+                    void loadStats({ force: true });
+                  }}
+                >
+                  Закрыть редактор
+                </button>
+              </div>
+              <MatchStatsForm
+                matchId={String(livescoreMatchId)}
+                scoreGHome={scoreGHome}
+                scoreGAway={scoreGAway}
+                onSaved={() => {
+                  setAdminStatsEditing(false);
+                  void loadStats({ force: true });
+                }}
+                scoreEdit={null}
+              />
+            </div>
           ) : null}
           {apiReturnedEmpty ? (
             <p className="body-lg match-stats-hint">
-              Детальная статистика с сервера пуста — ниже ориентировочные значения.
+              Показатели от провайдера для этого матча отсутствуют — ниже отображается расчёт на клиенте по контексту встречи.
             </p>
           ) : null}
 
           {showStatsSkeleton ? (
-            <MatchStatsListSkeleton rows={7} />
-          ) : (
+            <MatchStatsListSkeleton rows={DISPLAY_STATS.length} />
+          ) : showMatchStatsBars ? (
           <div className="match-stats-list">
-            {stats.map((row) => {
+            {stats.map((row, rowIdx) => {
               const maxVal = Math.max(row.home, row.away, 1);
               const homeMaxPct = (row.home / maxVal) * 100;
               const awayMaxPct = (row.away / maxVal) * 100;
@@ -554,43 +733,48 @@ const MatchStatsPage = () => {
               const awayBg = tie ? barStrong : (row.away > row.home ? barStrong : barSoft);
 
               return (
-                <div className="match-stats-stat-block" key={row.key}>
-                  <div className="match-stats-stat-head">
-                    <span className="match-stats-stat-val">
-                      {row.home}
-                      {row.suffix}
-                    </span>
-                    <span className="match-stats-stat-label">{row.label}</span>
-                    <span className="match-stats-stat-val">
-                      {row.away}
-                      {row.suffix}
-                    </span>
-                  </div>
-                  <div className="match-stats-dual-bar" aria-hidden="true">
-                    <div className="match-stats-track">
-                      <div
-                        className="match-stats-fill match-stats-fill--from-right"
-                        style={{
-                          width: `${homeW}%`,
-                          background: homeBg,
-                        }}
-                      />
+                <React.Fragment key={row.key}>
+                  {row.tier === 'pro' && stats[rowIdx - 1]?.tier !== 'pro' ? (
+                    <h3 className="match-stats-tier-title title-sm">Профи‑статистика</h3>
+                  ) : null}
+                  <div className="match-stats-stat-block">
+                    <div className="match-stats-stat-head">
+                      <span className="match-stats-stat-val">
+                        {row.home}
+                        {row.suffix}
+                      </span>
+                      <span className="match-stats-stat-label">{row.label}</span>
+                      <span className="match-stats-stat-val">
+                        {row.away}
+                        {row.suffix}
+                      </span>
                     </div>
-                    <div className="match-stats-track">
-                      <div
-                        className="match-stats-fill match-stats-fill--from-left"
-                        style={{
-                          width: `${awayW}%`,
-                          background: awayBg,
-                        }}
-                      />
+                    <div className="match-stats-dual-bar" aria-hidden="true">
+                      <div className="match-stats-track">
+                        <div
+                          className="match-stats-fill match-stats-fill--from-right"
+                          style={{
+                            width: `${homeW}%`,
+                            background: homeBg,
+                          }}
+                        />
+                      </div>
+                      <div className="match-stats-track">
+                        <div
+                          className="match-stats-fill match-stats-fill--from-left"
+                          style={{
+                            width: `${awayW}%`,
+                            background: awayBg,
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
+                </React.Fragment>
               );
             })}
           </div>
-          )}
+          ) : null}
         </section>
       </div>
     </motion.main>
